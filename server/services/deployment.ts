@@ -66,6 +66,10 @@ export async function markDeploymentBuilt(_id: ModelId) {
   return DeploymentModel.findByIdAndUpdate(_id, { built: true })
 }
 
+export async function markDeploymentDeleted(_id: ModelId) {
+  return DeploymentModel.findByIdAndUpdate(_id, { deleted: true })
+}
+
 interface CreateDeployment {
   schemaRef: string
   uuid: string

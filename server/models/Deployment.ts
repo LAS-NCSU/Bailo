@@ -28,6 +28,7 @@ export interface Deployment {
 
   logs: Types.Array<LogStatement>
   built: boolean
+  deleted: boolean
 
   owner: Types.ObjectId | UserDoc
 
@@ -51,6 +52,7 @@ const DeploymentSchema = new Schema<Deployment>(
 
     logs: [{ timestamp: Date, level: String, msg: String }],
     built: { type: Boolean, required: true, default: false },
+    deleted: { type: Boolean, required: true, default: false },
 
     owner: { type: Schema.Types.ObjectId, ref: 'User', index: true },
   },
