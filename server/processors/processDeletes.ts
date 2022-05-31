@@ -46,7 +46,10 @@ export default async function processDeploymentDelete() {
       const tag = `${modelID}:${initialVersionRequested}`
       const externalImage = `${config.get('registry.host')}/${user.id}/${tag}`
 
-      deployment.log('info', `Deleting image tag.  Current: internal/${tag}`)
+      deployment.log(
+        'info',
+        `Requesting a delete of image with tag. ${registry}/${user.id}/${modelID}/manifests/${initialVersionRequested}`
+      )
 
       const token = await getAccessToken({ id: 'admin', _id: 'admin' }, [
         { type: 'repository', name: `${user.id}/${modelID}`, actions: ['push', 'pull', 'delete'] },
@@ -82,10 +85,12 @@ export default async function processDeploymentDelete() {
       })
 
       if (imageDeleteRes.status === 401) {
+        deployment.log('info', `User is not Authorized to delete: ${externalImage}`)
         throw new Error(`User is not Authorized to delete: ${externalImage}`)
       }
 
       if (imageDeleteRes.status === 404) {
+        deployment.log('info', `Image does not exist with tag: ${externalImage}`)
         throw new Error(`Image does not exist with tag: ${externalImage}`)
       }
 

@@ -23,6 +23,7 @@ import {
   getCurrentUserDeployments,
   postDeployment,
   resetDeploymentApprovals,
+  deleteDeployments,
 } from './routes/v1/deployment'
 import { getDockerRegistryAuth } from './routes/v1/registryAuth'
 import processDeployments from './processors/processDeployments'
@@ -32,6 +33,7 @@ import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/re
 import logger, { expressErrorHandler, expressLogger } from './utils/logger'
 import { pullBuilderImage } from './utils/build'
 import { createIndexes } from './models/Model'
+import processDeploymentDelete from './processors/processDeletes'
 
 const port = config.get('listen')
 const dev = process.env.NODE_ENV !== 'production'
@@ -79,6 +81,7 @@ app.prepare().then(async () => {
   server.get('/api/v1/deployment/:uuid', ...getDeployment)
   server.get('/api/v1/deployment/user/:id', ...getCurrentUserDeployments)
   server.post('/api/v1/deployment/:uuid/reset-approvals', ...resetDeploymentApprovals)
+  server.post('/api/v1/deployment/retire', ...deleteDeployments)
 
   server.get('/api/v1/version/:id', ...getVersion)
   server.put('/api/v1/version/:id', ...putVersion)
@@ -101,7 +104,7 @@ app.prepare().then(async () => {
 
   server.get('/api/v1/registry_auth', ...getDockerRegistryAuth)
 
-  await Promise.all([processUploads(), processDeployments()])
+  await Promise.all([processUploads(), processDeployments(), processDeploymentDelete()])
 
   pullBuilderImage()
 

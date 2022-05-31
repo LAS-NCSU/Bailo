@@ -2,7 +2,7 @@ import { castArray } from 'lodash'
 
 import { Forbidden } from '../utils/result'
 import DeploymentModel, { DeploymentDoc } from '../models/Deployment'
-import { Deployment, User, ModelId } from '../../types/interfaces'
+import { Deployment, User, ModelId, DeploymentId } from '../../types/interfaces'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
 import { createSerializer, SerializerOptions } from '../utils/logger'
@@ -45,6 +45,13 @@ export async function findDeploymentById(user: UserDoc, id: ModelId, opts?: GetD
   if (opts?.populate) deployment = deployment.populate('model')
 
   return filterDeployment(user, await deployment)
+}
+
+export async function findDeploymentsByUuid(user: UserDoc, uuids: [DeploymentId], opts?: GetDeploymentOptions) {
+  let deployments = DeploymentModel.find({ uuid: uuids })
+  if (opts?.populate) deployments = deployments.populate('model')
+
+  return filterDeployment(user, await deployments)
 }
 
 export interface DeploymentFilter {

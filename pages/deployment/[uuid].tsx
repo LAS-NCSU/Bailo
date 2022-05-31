@@ -23,6 +23,7 @@ import Stack from '@mui/material/Stack'
 import RestartAlt from '@mui/icons-material/RestartAlt'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
+import Typography from '@mui/material/Typography'
 
 import Link from 'next/link'
 import { useGetDeployment } from '../../data/deployment'
@@ -39,7 +40,7 @@ import { postEndpoint } from '../../data/api'
 
 const ComplianceFlow = dynamic(() => import('../../src/ComplianceFlow'))
 
-type TabOptions = 'overview' | 'compliance' | 'build'
+type TabOptions = 'overview' | 'compliance' | 'build' | 'settings'
 
 function CodeLine({ line }) {
   const [openSnackbar, setOpenSnackbar] = useState(false)
@@ -151,6 +152,10 @@ export default function Deployment() {
     await postEndpoint(`/api/v1/deployment/${deployment?.uuid}/reset-approvals`, {}).then((res) => res.json())
   }
 
+  const requestDeploymentDelete = async () => {
+    await postEndpoint(`/api/v1/deployment/retire`, { uuids: [deployment?.uuid] }).then((res) => res.json())
+  }
+
   return (
     <>
       <Wrapper title={`Deployment: ${deployment.metadata.highLevelDetails.name}`} page='deployment'>
@@ -201,6 +206,23 @@ export default function Deployment() {
           {tab === 'compliance' && <ComplianceFlow initialElements={complianceFlow} />}
 
           {tab === 'build' && <TerminalLog logs={deployment.logs} title='Deployment Build Logs' />}
+
+          {tab === 'settings' && (
+            <>
+              <Typography variant='h6' sx={{ mb: 1 }}>
+                General
+              </Typography>
+
+              <Box sx={{ mb: 4 }} />
+
+              <Typography variant='h6' sx={{ mb: 1 }}>
+                Danger Zone
+              </Typography>
+              <Button variant='contained' color='error' onClick={requestDeploymentDelete}>
+                Delete Deployment
+              </Button>
+            </>
+          )}
         </Paper>
       </Wrapper>
       <Dialog maxWidth='lg' onClose={handleClose} open={open}>

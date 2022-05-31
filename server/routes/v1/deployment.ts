@@ -1,13 +1,21 @@
 import { Request, Response } from 'express'
 import bodyParser from 'body-parser'
-import { validateSchema } from '../../utils/validateSchema'
 import { customAlphabet } from 'nanoid'
+import { getDeleteQueue } from 'server/utils/queues'
+import { getUserById } from 'server/services/user'
+import { Deployment } from '@/types/interfaces'
+import { validateSchema } from '../../utils/validateSchema'
 import { ensureUserRole } from '../../utils/user'
 import { createDeploymentRequests } from '../../services/request'
 import { BadReq, NotFound, Forbidden } from '../../utils/result'
 import { findModelByUuid } from '../../services/model'
 import { findVersionByName } from '../../services/version'
-import { createDeployment, findDeploymentByUuid, findDeployments } from '../../services/deployment'
+import {
+  createDeployment,
+  findDeploymentByUuid,
+  findDeployments,
+  findDeploymentsByUuid,
+} from '../../services/deployment'
 import { ApprovalStates } from '../../models/Deployment'
 import { findSchemaByRef } from '../../services/schema'
 
@@ -26,6 +34,56 @@ export const getDeployment = [
 
     req.log.info({ code: 'get_deployment_by_uuid', deployment }, 'Fetching deployment by a given UUID')
     return res.json(deployment)
+  },
+]
+
+export const deleteDeployments = [
+  ensureUserRole('user'),
+  bodyParser.json(),
+  async (req: Request, res: Response) => {
+    req.log.info({ code: 'requesting_deployment_delete' }, 'User requesting deployment delete')
+    const body = req.body as any
+
+    // TODO: validate that this user exists
+    body.user = req.user?.id
+    const user = await getUserById(body.user)
+
+    if (!user) {
+      req.log.error(`Can't request deployment deletion, invalid user`)
+      throw BadReq({ code: 'user not found', user_id: body.user }, 'Unable to find deployment owner')
+    }
+
+    // TODO: Is this input santized anywhere?
+    const deployments = (await findDeploymentsByUuid(user.id, body.uuids)).filter(
+      (deployment: Deployment) => deployment.deleted === false
+    )
+
+    if (!deployments.length) {
+      throw NotFound(
+        { code: 'deployments_not_found', uuids: body.uuids },
+        `Unable to find deployments with uuids: '${body.uuids}'`
+      )
+    }
+
+    const deleteQueue = await (
+      await getDeleteQueue()
+    ).add(
+      deployments.map((deployment) => {
+        req.log.info(
+          {
+            code: 'get_deployment_by_uuid',
+            deployment: deployment.uuid,
+          },
+          'Deleting deployment by a given UUID'
+        )
+        return {
+          deploymentId: deployment._id,
+          userId: user._id,
+        }
+      })
+    )
+
+    return res.json({ deployments: deployments.map((deployment) => deployment.uuid) })
   },
 ]
 
@@ -85,7 +143,7 @@ export const postDeployment = [
 
     const deployment = await createDeployment(req.user!, {
       schemaRef: body.schemaRef,
-      uuid: uuid,
+      uuid,
 
       model: model._id,
       metadata: body,
@@ -125,7 +183,7 @@ export const resetDeploymentApprovals = [
   ensureUserRole('user'),
   bodyParser.json(),
   async (req: Request, res: Response) => {
-    const user = req.user
+    const { user } = req
     const { uuid } = req.params
     const deployment = await findDeploymentByUuid(req.user!, uuid)
     if (!deployment) {

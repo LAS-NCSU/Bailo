@@ -40,15 +40,15 @@ export async function getDeleteQueue() {
     })
 
     deleteQueue.on('succeeded', async (message: QueueMessage) => {
-      await setDeleteState(message, 'succeeded')
+      await sendDeploymentEmail(message, 'succeeded')
     })
 
     deleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
-      await setDeleteState(message, 'retrying', e)
+      await sendDeploymentEmail(message, 'retrying', e)
     })
 
     deleteQueue.on('failed', async (message: QueueMessage, e: any) => {
-      await setDeleteState(message, 'failed', e)
+      await sendDeploymentEmail(message, 'failed', e)
     })
   }
 
@@ -143,42 +143,6 @@ async function setUploadState(msg: QueueMessage, state: string, _e?: any) {
   })
 }
 
-async function setDeleteState(msg: QueueMessage, state: string, _e?: any) {
-  const user = await getUserByInternalId(msg.payload.userId)
-  if (!user) {
-    throw new Error(`Unable to find user '${msg.payload.userId}'`)
-  }
-
-  const version = await findVersionById(user, msg.payload.versionId, { populate: true })
-  if (!version) {
-    throw new Error(`Unable to find version '${msg.payload.versionId}'`)
-  }
-
-  const model = version.model as ModelDoc
-
-  await markVersionState(user, msg.payload.versionId, state)
-
-  if (!(model.owner as UserDoc).email) {
-    return
-  }
-
-  const message = state === 'retrying' ? 'failed but is retrying' : state
-  const base = `${config.get('app.protocol')}://${config.get('app.host')}:${config.get('app.port')}`
-
-  await sendEmail({
-    to: (model.owner as UserDoc).email,
-    ...simpleEmail({
-      text: `Your model build for '${model.currentMetadata.highLevelDetails.name}' has ${message}`,
-      columns: [
-        { header: 'Model Name', value: model.currentMetadata.highLevelDetails.name },
-        { header: 'Build Type', value: 'Model' },
-        { header: 'Status', value: state.charAt(0).toUpperCase() + state.slice(1) },
-      ],
-      buttons: [{ text: 'Build Logs', href: `${base}/model/${model.uuid}` }],
-      subject: `Your model build for '${model.currentMetadata.highLevelDetails.name}' has ${message}`,
-    }),
-  })
-}
 
 async function sendDeploymentEmail(msg: QueueMessage, state: string, _e?: any) {
   const user = await getUserByInternalId(msg.payload.userId)
