@@ -81,9 +81,14 @@ function Model() {
   const onVersionChange = setTargetValue(setSelectedVersion)
 
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmRollbackOpen, setConfirmRollbackOpen] = useState(false)
 
   const handleToggleConfirmDialog = () => {
     setConfirmOpen(!confirmOpen)
+  }
+
+  const handleToggleConfirmRollbackDialog = () => {
+    setConfirmRollbackOpen(!confirmRollbackOpen)
   }
 
   const onConfirmDelete = async () => {
@@ -94,12 +99,16 @@ function Model() {
     // Get UUID of most recent non-deleted deployment.
     if (deployments.length > 0) {
       const depluuid = deployments.find((elem) => !elem.deleted).uuid
-      await postEndpoint(`/api/v1/deployment/retire`, { uuids: [depluuid] }).then(() => router.push(`/model/${uuid}`))
+      await postEndpoint(`/api/v1/deployment/retire`, { uuids: [depluuid] }).then(() => router.reload())
     }
   }
 
   const onCancelDelete = () => {
     handleToggleConfirmDialog();
+  }
+
+  const onCancelRollback = () => {
+    handleToggleConfirmRollbackDialog();
   }
 
   const handleGroupChange = (_event: React.SyntheticEvent, newValue: TabOptions) => {
@@ -377,7 +386,7 @@ function Model() {
                   </Typography>
                 </Grid>
                 <Grid item xs={4} md={2}>
-                  <Button variant='contained' color='warning' onClick={onRollbackDeployment}>
+                  <Button variant='contained' color='warning' onClick={handleToggleConfirmRollbackDialog}>
                     Rollback
                   </Button>
                 </Grid>
@@ -404,6 +413,27 @@ function Model() {
                   Cancel
                 </Button>
                 <Button variant='contained' onClick={onConfirmDelete} data-test='confirmButton' color='error'>
+                  Confirm
+                </Button>
+              </DialogActions>
+            </Dialog>
+            <Dialog open={confirmRollbackOpen} onClose={handleToggleConfirmRollbackDialog}>
+              <DialogTitle id='rollback-dialog-title'>Confirm Rollback Deployment</DialogTitle>
+              <DialogContent>
+                <DialogContentText id='rollback-dialog-description'>
+                  Are you sure you want to delete your most recent deployment?
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button color='secondary' variant='outlined' onClick={onCancelRollback}>
+                  Cancel
+                </Button>
+                <Button
+                  variant='contained'
+                  onClick={onRollbackDeployment}
+                  data-test='confirmRollbackButton'
+                  color='warning'
+                >
                   Confirm
                 </Button>
               </DialogActions>
