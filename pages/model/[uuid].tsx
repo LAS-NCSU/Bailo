@@ -97,9 +97,9 @@ function Model() {
 
   const onRollbackDeployment = async () => {
     // Get UUID of most recent non-deleted deployment.
-    if (deployments.length > 0) {
-      const depluuid = deployments.find((elem) => !elem.deleted).uuid
-      await postEndpoint(`/api/v1/deployment/retire`, { uuids: [depluuid] }).then(() => router.reload())
+    if (versions.length > 0) {
+      const versid = versions.find((elem) => !elem.deleted)._id
+      await postEndpoint(`/api/v1/api/v1/version/${versid}/retire`, {}).then(() => router.reload())
     }
   }
 
@@ -394,7 +394,7 @@ function Model() {
                   <Typography variant='body1'>
                     Warning: This will delete{' '}
                     <Box component='span' fontWeight='fontWeightMedium'>
-                      the most recent deployment{' '}
+                      the most recent version{' '}
                     </Box>
                     of this model
                   </Typography>
@@ -418,10 +418,10 @@ function Model() {
               </DialogActions>
             </Dialog>
             <Dialog open={confirmRollbackOpen} onClose={handleToggleConfirmRollbackDialog}>
-              <DialogTitle id='rollback-dialog-title'>Confirm Rollback Deployment</DialogTitle>
+              <DialogTitle id='rollback-dialog-title'>Confirm Version Rollback</DialogTitle>
               <DialogContent>
                 <DialogContentText id='rollback-dialog-description'>
-                  Are you sure you want to delete your most recent deployment?
+                  Are you sure you want to delete the most recent version of this model?
                 </DialogContentText>
               </DialogContent>
               <DialogActions>
