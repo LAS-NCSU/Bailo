@@ -86,7 +86,17 @@ function Model() {
     setConfirmOpen(!confirmOpen)
   }
 
-  const onConfirmDelete = () => false
+  const onConfirmDelete = async () => {
+    await postEndpoint(`/api/v1/model/${uuid}/retire`, {}).then(() => router.push(`/`))
+  }
+
+  const onRollbackDeployment = async () => {
+    // Get UUID of most recent non-deleted deployment.
+    if (deployments.length > 0) {
+      const depluuid = deployments.find((elem) => !elem.deleted).uuid
+      await postEndpoint(`/api/v1/deployment/retire`, { uuids: [depluuid] }).then(() => router.push(`/model/${uuid}`))
+    }
+  }
 
   const onCancelDelete = () => {
     handleToggleConfirmDialog();
@@ -367,7 +377,7 @@ function Model() {
                   </Typography>
                 </Grid>
                 <Grid item xs={4} md={2}>
-                  <Button variant='contained' color='warning'>
+                  <Button variant='contained' color='warning' onClick={onRollbackDeployment}>
                     Rollback
                   </Button>
                 </Grid>
