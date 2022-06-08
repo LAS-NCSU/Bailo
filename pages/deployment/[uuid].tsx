@@ -4,6 +4,7 @@ import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
+import DialogActions from '@mui/material/DialogActions'
 import Paper from '@mui/material/Paper'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
@@ -93,6 +94,15 @@ export default function Deployment() {
   const [tag, setTag] = useState<string>('')
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const actionOpen = anchorEl !== null
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const handleToggleConfirmDialog = () => {
+    setConfirmOpen(!confirmOpen)
+  }
+
+  const onCancelDelete = () => {
+    handleToggleConfirmDialog();
+  }
 
   const { currentUser, isCurrentUserLoading, isCurrentUserError } = useGetCurrentUser()
   const { deployment, isDeploymentLoading, isDeploymentError } = useGetDeployment(uuid)
@@ -153,9 +163,8 @@ export default function Deployment() {
   }
 
   const requestDeploymentDelete = async () => {
-    await postEndpoint(`/api/v1/deployment/retire`, { uuids: [deployment?.uuid] }).then((res) => res.json())
+    await postEndpoint(`/api/v1/deployment/retire`, { uuids: [deployment?.uuid] }).then(() => router.reload())
   }
-
   return (
     <>
       <Wrapper title={`Deployment: ${deployment.metadata.highLevelDetails.name}`} page='deployment'>
@@ -218,9 +227,25 @@ export default function Deployment() {
               <Typography variant='h6' sx={{ mb: 1 }}>
                 Danger Zone
               </Typography>
-              <Button variant='contained' color='error' onClick={requestDeploymentDelete}>
+              <Button variant='contained' color='error' onClick={handleToggleConfirmDialog}>
                 Delete Deployment
               </Button>
+              <Dialog open={confirmOpen} onClose={handleToggleConfirmDialog}>
+                <DialogTitle id='alert-dialog-title'>Confirm Delete Deployment</DialogTitle>
+                <DialogContent>
+                  <DialogContentText id='alert-dialog-description'>
+                    Are you sure you want to delete this deployment
+                  </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                  <Button color='secondary' variant='outlined' onClick={onCancelDelete}>
+                    Cancel
+                  </Button>
+                  <Button variant='contained' onClick={requestDeploymentDelete} data-test='confirmButton' color='error'>
+                    Confirm
+                  </Button>
+                </DialogActions>
+              </Dialog>
             </>
           )}
         </Paper>
