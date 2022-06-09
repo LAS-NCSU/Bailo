@@ -328,11 +328,34 @@ function Model() {
             {deployments.map((deployment: Deployment) => (
               <Box key={`deployment-${deployment.uuid}`}>
                 <Link href={`/deployment/${deployment.uuid}`} passHref>
-                  <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
-                    {deployment.metadata.highLevelDetails.name}
-                  </MuiLink>
+                  <Box>
+                    {!deployment.deleted && (
+                      <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
+                        {deployment.metadata.highLevelDetails.name}
+                      </MuiLink>
+                    )}
+                    {deployment.deleted && (
+                      <Grid container sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Grid item xs={8} md={8}>
+                          <MuiLink
+                            variant='h5'
+                            sx={{ fontWeight: '500', textDecoration: 'line-through', fontStyle: 'italic' }}
+                          >
+                            {deployment.metadata.highLevelDetails.name}
+                          </MuiLink>
+                        </Grid>
+                        <Grid item xs={4} md={4}>
+                          <Typography
+                            variant='body1'
+                            sx={{ marginBottom: 2, textAlign: 'right', marginRight: 2, color: 'error.main' }}
+                          >
+                            Deployment Deleted
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    )}
+                  </Box>
                 </Link>
-
                 <Typography variant='body1' sx={{ marginBottom: 2 }}>
                   Contacts: {deployment.metadata.contacts.requester}, {deployment.metadata.contacts.secondPOC}
                 </Typography>
