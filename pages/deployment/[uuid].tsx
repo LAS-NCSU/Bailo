@@ -169,9 +169,11 @@ export default function Deployment() {
     <>
       <Wrapper title={`Deployment: ${deployment.metadata.highLevelDetails.name}`} page='deployment'>
         <Box sx={{ textAlign: 'right', pb: 3 }}>
-          <Button variant='outlined' color='primary' startIcon={<Info />} onClick={handleClickOpen}>
-            Show download commands
-          </Button>
+          {!deployment.deleted && (
+            <Button variant='outlined' color='primary' startIcon={<Info />} onClick={handleClickOpen}>
+              Show download commands
+            </Button>
+          )}
         </Box>
         <Paper sx={{ p: 3 }}>
           <Stack direction='row' spacing={2}>
