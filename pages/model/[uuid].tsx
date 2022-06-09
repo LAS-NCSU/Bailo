@@ -95,9 +95,9 @@ function Model() {
     await postEndpoint(`/api/v1/model/${uuid}/retire`, {}).then(() => router.push(`/`))
   }
 
-  const onRollbackDeployment = async () => {
-    // Get UUID of most recent non-deleted deployment.
+  const onRollbackVersion = async () => {
     if (versions.length > 0) {
+      // Get UUID of most recent non-deleted version.
       const versid = versions.find((elem) => !elem.deleted)._id
       await postEndpoint(`/api/v1/api/v1/version/${versid}/retire`, {}).then(() => router.reload())
     }
@@ -453,7 +453,7 @@ function Model() {
                 </Button>
                 <Button
                   variant='contained'
-                  onClick={onRollbackDeployment}
+                  onClick={onRollbackVersion}
                   data-test='confirmRollbackButton'
                   color='warning'
                 >
