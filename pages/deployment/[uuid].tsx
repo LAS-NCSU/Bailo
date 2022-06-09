@@ -189,6 +189,14 @@ export default function Deployment() {
             >
               Actions
             </Button>
+            {deployment.deleted && (
+              <Typography
+                variant='body1'
+                sx={{ marginBottom: 2, textAlign: 'right', marginRight: 2, color: 'error.main', alignSelf: 'center' }}
+              >
+                Deployment Deleted
+              </Typography>
+            )}
           </Stack>
           <Menu anchorEl={anchorEl as HTMLDivElement} open={actionOpen} onClose={handleMenuClose}>
             <MenuList>
