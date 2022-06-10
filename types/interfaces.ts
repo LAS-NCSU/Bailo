@@ -143,3 +143,5 @@ export interface SplitSchema {
 export type ModelId = string | Types.ObjectId
 
 export type DeploymentId = string | Types.ObjectId
+
+export type VersionId = string | Types.ObjectId

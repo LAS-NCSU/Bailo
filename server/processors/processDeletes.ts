@@ -1,7 +1,9 @@
 import config from 'config'
 import prettyMs from 'pretty-ms'
 import https from 'https'
-import { getDeleteQueue } from '../utils/queues'
+import { findVersionById, markVersionState } from 'server/services/version'
+import { ModelDoc } from 'server/models/Model'
+import { getDeploymentDeleteQueue, getModelDeleteQueue } from '../utils/queues'
 import logger from '../utils/logger'
 import { getAccessToken } from '../routes/v1/registryAuth'
 import { getUserByInternalId } from '../services/user'
@@ -11,8 +13,53 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: !config.get('registry.insecure'),
 })
 
-export default async function processDeploymentDelete() {
-  ;(await getDeleteQueue()).process(async (msg) => {
+async function deleteImage(
+  tagNamespace: string,
+  modelId: string,
+  modelVersion: string,
+  logFunct: (level: string, msg: string) => Promise<void>
+): Promise<Response> {
+  const registry = `https://${config.get('registry.host')}/v2`
+  // const externalImage = `${config.get('registry.host')}/${user.id}/${tag}`
+
+  logFunct('info', `Requesting a delete of image with tag. /${tagNamespace}/${modelId}/manifests/${modelVersion}`)
+
+  logger.info(`Requesting a delete of image with tag. /${tagNamespace}/${modelId}/manifests/${modelVersion}`)
+
+  const token = await getAccessToken({ id: 'admin', _id: 'admin' }, [
+    { type: 'repository', name: `${tagNamespace}/${modelId}`, actions: ['pull', 'delete'] },
+  ])
+  const authorisation = `Bearer ${token}`
+
+  const manifest = await fetch(`${registry}/${tagNamespace}/${modelId}/manifests/${modelVersion}`, {
+    headers: {
+      Accept: 'application/vnd.docker.distribution.manifest.v2+json',
+      Authorization: authorisation,
+    },
+    agent: httpsAgent,
+  } as RequestInit).then((res: any) => {
+    logger.info({
+      status: res.status,
+    })
+    return res.json()
+  })
+
+  return fetch(`${registry}/${tagNamespace}/${modelId}/manifests/${manifest.config.digest}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: authorisation,
+    },
+    agent: httpsAgent,
+  } as RequestInit).then((res: any) => {
+    logger.info({
+      status: res.status,
+    })
+    return res
+  })
+}
+
+export async function processDeploymentDelete() {
+  ;(await getDeploymentDeleteQueue()).process(async (msg) => {
     logger.info({ job: msg.payload }, 'Started deleting deployment')
     try {
       const startTime = new Date()
@@ -42,48 +89,9 @@ export default async function processDeploymentDelete() {
 
       const { modelID, initialVersionRequested } = deployment.metadata.highLevelDetails
 
-      const registry = `https://${config.get('registry.host')}/v2`
-      const tag = `${modelID}:${initialVersionRequested}`
-      const externalImage = `${config.get('registry.host')}/${user.id}/${tag}`
+      const imageDeleteRes = await deleteImage(user.id, modelID, initialVersionRequested, deployment.log)
 
-      deployment.log(
-        'info',
-        `Requesting a delete of image with tag. ${registry}/${user.id}/${modelID}/manifests/${initialVersionRequested}`
-      )
-
-      const token = await getAccessToken({ id: 'admin', _id: 'admin' }, [
-        { type: 'repository', name: `${user.id}/${modelID}`, actions: ['push', 'pull', 'delete'] },
-      ])
-      const authorisation = `Bearer ${token}`
-
-      deployment.log('info', `Requesting ${registry}/${user.id}/${modelID}/manifests/${initialVersionRequested}`)
-
-      const manifest = await fetch(`${registry}/${user.id}/${modelID}/manifests/${initialVersionRequested}`, {
-        headers: {
-          Accept: 'application/vnd.docker.distribution.manifest.v2+json',
-          Authorization: authorisation,
-        },
-        agent: httpsAgent,
-      } as RequestInit).then((res: any) => {
-        logger.info({
-          status: res.status,
-        })
-        return res.json()
-      })
-
-      const imageDeleteRes = await fetch(`${registry}/${user.id}/${modelID}/manifests/${manifest.config.digest}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: authorisation,
-        },
-        agent: httpsAgent,
-      } as RequestInit).then((res: any) => {
-        logger.info({
-          status: res.status,
-        })
-        return res
-      })
-
+      const externalImage = `${config.get('registry.host')}/${user.id}/${modelID}:${initialVersionRequested}`
       if (imageDeleteRes.status === 401) {
         deployment.log('info', `User is not Authorized to delete: ${externalImage}`)
         throw new Error(`User is not Authorized to delete: ${externalImage}`)
@@ -100,6 +108,62 @@ export default async function processDeploymentDelete() {
         await markDeploymentDeleted(deployment._id)
         const time = prettyMs(new Date().getTime() - startTime.getTime())
         await deployment.log('info', `Deleted deployment with tag '${externalImage}' in ${time}`)
+      }
+    } catch (e) {
+      logger.error({ error: e, deploymentId: msg.payload.deploymentId }, 'Error occurred whilst deleting deployment')
+      throw e
+    }
+  })
+}
+
+export async function processModelDelete() {
+  ;(await getModelDeleteQueue()).process(async (msg) => {
+    logger.info({ job: msg.payload }, 'Started deleting model')
+    try {
+      const startTime = new Date()
+
+      const { modelId, userId, versionId } = msg.payload
+
+      const user = await getUserByInternalId(userId)
+
+      if (!user) {
+        logger.error('Unable to find model owner')
+        throw new Error('Unable to find model owner')
+      }
+
+      const version = await findVersionById(user, versionId, { populate: true })
+      if (!version) {
+        throw new Error(`Unable to find version '${versionId}'`)
+      }
+
+      const vlog = logger.child({ versionId: version._id })
+
+      if (version.state?.deleted === true) {
+        logger.error(`Model version with id: ${versionId} already deleted.`)
+        throw new Error(`Model version id: ${versionId} already deleted.`)
+      }
+
+      const { name: modelID, version: modelVersion } = version.metadata.highLevelDetails
+
+      const imageDeleteRes = await deleteImage(user.id, modelID, modelVersion, version.log)
+
+      const externalImage = `${config.get('registry.host')}/${user.id}/${modelID}:${modelVersion}`
+      if (imageDeleteRes.status === 401) {
+        version.log('info', `User is not Authorized to delete: ${externalImage}`)
+        throw new Error(`User is not Authorized to delete: ${externalImage}`)
+      }
+
+      if (imageDeleteRes.status === 404) {
+        version.log('info', `Image does not exist with tag: ${externalImage}`)
+        throw new Error(`Image does not exist with tag: ${externalImage}`)
+      }
+
+      if (imageDeleteRes.status === 202) {
+        version.log('info', 'Deleted model version')
+        vlog.info('Marking model version as deleted')
+        await markVersionState(user, version._id, 'deleted')
+        const time = prettyMs(new Date().getTime() - startTime.getTime())
+        await version.log('info', `Deleted model version with tag '${externalImage}' in ${time}`)
       }
     } catch (e) {
       logger.error({ error: e, deploymentId: msg.payload.deploymentId }, 'Error occurred whilst deleting deployment')

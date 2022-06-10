@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import bodyParser from 'body-parser'
 import { customAlphabet } from 'nanoid'
-import { getDeleteQueue } from 'server/utils/queues'
+import { getDeploymentDeleteQueue } from 'server/utils/queues'
 import { getUserById } from 'server/services/user'
 import { Deployment } from '@/types/interfaces'
 import { validateSchema } from '../../utils/validateSchema'
@@ -65,13 +65,13 @@ export const deleteDeployments = [
       )
     }
 
-    const deleteQueue = await (
-      await getDeleteQueue()
+    const jobId = await (
+      await getDeploymentDeleteQueue()
     ).add(
       deployments.map((deployment) => {
         req.log.info(
           {
-            code: 'get_deployment_by_uuid',
+            code: 'delete_deployment_by_uuid',
             deployment: deployment.uuid,
           },
           'Deleting deployment by a given UUID'
@@ -81,6 +81,11 @@ export const deleteDeployments = [
           userId: user._id,
         }
       })
+    )
+
+    req.log.info(
+      { code: 'created_delete_deployment_job', jobId },
+      'Successfully created job in delete deployment queue'
     )
 
     return res.json({ deployments: deployments.map((deployment) => deployment.uuid) })

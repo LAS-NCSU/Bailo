@@ -33,6 +33,21 @@ export async function filterDeployment<T>(user: UserDoc, unfiltered: T): Promise
   return Array.isArray(unfiltered) ? (filtered as unknown as T) : filtered[0]
 }
 
+export async function findDeploymentsByModelVersion(user: UserDoc, id: ModelId, version: string) {
+  // const deployments = DeploymentModel.findById(id).
+  // const deployments = DeploymentModel.aggregate
+  const deployments = DeploymentModel.find({
+    model: id,
+    metadata: {
+      highLevelDetails: {
+        initialVersionRequest: version,
+      },
+    },
+  })
+
+  
+}
+
 export async function findDeploymentByUuid(user: UserDoc, uuid: string, opts?: GetDeploymentOptions) {
   let deployment = DeploymentModel.findOne({ uuid })
   if (opts?.populate) deployment = deployment.populate('model')
@@ -57,10 +72,13 @@ export async function findDeploymentsByUuid(user: UserDoc, uuids: [DeploymentId]
 export interface DeploymentFilter {
   owner?: ModelId
   model?: ModelId
+  deleted?: boolean
 }
 
-export async function findDeployments(user: UserDoc, { owner, model }: DeploymentFilter) {
+export async function findDeployments(user: UserDoc, { owner, model, deleted = false }: DeploymentFilter) {
   const query: any = {}
+
+  query.deleted = deleted
 
   if (owner) query.owner = owner
   if (model) query.model = model

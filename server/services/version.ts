@@ -1,14 +1,13 @@
 import { castArray } from 'lodash'
-import VersionModel from '../models/Version'
+import VersionModel, { VersionDoc } from '../models/Version'
 
-import { Version, User, ModelId } from '../../types/interfaces'
+import { Version, User, ModelId, VersionId } from '../../types/interfaces'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
 import { BadReq, Forbidden } from '../utils/result'
 import { createSerializer, SerializerOptions } from '../utils/logger'
 import { serializedModelFields } from './model'
 import { UserDoc } from '../models/User'
-import { VersionDoc } from '../models/Version'
 import ModelModel from '../models/Model'
 
 const authorisation = new AuthorisationBase()
@@ -33,6 +32,11 @@ export async function filterVersion<T>(user: UserDoc, unfiltered: T): Promise<T>
 
   return Array.isArray(unfiltered) ? (filtered as unknown as T) : filtered[0]
 }
+
+// export async function markVersionDeleted(_id: VersionId) {
+//   const versionRecord = await VersionModel.findOne(_id)
+//   return VersionModel.findByIdAndUpdate(_id, { state: { ...versionRecord.state, deleted: true } })
+// }
 
 export async function findVersionById(user: UserDoc, id: ModelId, opts?: GetVersionOptions) {
   let version = VersionModel.findById(id)
@@ -69,14 +73,18 @@ export async function markVersionState(user: UserDoc, _id: ModelId, state: strin
     throw BadReq({ code: 'model_invalid_type', _id }, `Provided invalid version '${_id}'`)
   }
 
-  version.state.build = {
-    ...(version.state.build || {}),
-    state,
+  const buildState: { build: { state: string; reason?: string } } = {
+    build: {
+      ...(version.state.build || {}),
+      state,
+    },
   }
 
   if (state === 'succeeded') {
-    version.state.build.reason = undefined
+    buildState.build.reason = undefined
   }
+
+  version.state = buildState
 
   version.markModified('state')
   await version.save()

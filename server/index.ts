@@ -1,6 +1,7 @@
 import express from 'express'
 import next from 'next'
 import http from 'http'
+import config from 'config'
 import processUploads from './processors/processUploads'
 import {
   getModelByUuid,
@@ -16,7 +17,6 @@ import { getUiConfig } from './routes/v1/uiConfig'
 import { connectToMongoose } from './utils/database'
 import { ensureBucketExists } from './utils/minio'
 import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
-import config from 'config'
 import { getVersion, putVersion, resetVersionApprovals } from './routes/v1/version'
 import {
   getDeployment,
@@ -33,7 +33,7 @@ import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/re
 import logger, { expressErrorHandler, expressLogger } from './utils/logger'
 import { pullBuilderImage } from './utils/build'
 import { createIndexes } from './models/Model'
-import processDeploymentDelete from './processors/processDeletes'
+import { processDeploymentDelete, processModelDelete } from './processors/processDeletes'
 
 const port = config.get('listen')
 const dev = process.env.NODE_ENV !== 'production'
@@ -107,6 +107,7 @@ app.prepare().then(async () => {
   await Promise.all([processUploads(), processDeployments(), processDeploymentDelete()])
 
   pullBuilderImage()
+  
 
   server.use((req, res) => {
     return handle(req, res)

@@ -13,7 +13,8 @@ import { connectToMongoose } from './database'
 
 let uploadQueue: PMongoQueue | undefined = undefined
 let deploymentQueue: PMongoQueue | undefined = undefined
-let deleteQueue: PMongoQueue | undefined = undefined
+let modelDeleteQueue: PMongoQueue | undefined = undefined
+let deploymentDeleteQueue: PMongoQueue | undefined = undefined
 let mongoClient: mongoose.Connection | undefined = undefined
 
 export async function closeMongoInstance() {
@@ -29,30 +30,55 @@ export async function getMongoInstance() {
   return mongoClient
 }
 
-export async function getDeleteQueue() {
-  if (!deleteQueue) {
+export async function getModelDeleteQueue() {
+  if (!modelDeleteQueue) {
     const client = await getMongoInstance()
     const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-dead')
-    deleteQueue = new PMongoQueue(client.db, 'queue-deletes', {
+    modelDeleteQueue = new PMongoQueue(client.db, 'queue-deletes', {
       deadQueue: deleteDeadQueue,
       maxRetries: 2,
       visibility: 60 * 9,
     })
 
-    deleteQueue.on('succeeded', async (message: QueueMessage) => {
+    modelDeleteQueue.on('succeeded', async (message: QueueMessage) => {
       await sendDeploymentEmail(message, 'succeeded')
     })
 
-    deleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
+    modelDeleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
       await sendDeploymentEmail(message, 'retrying', e)
     })
 
-    deleteQueue.on('failed', async (message: QueueMessage, e: any) => {
+    modelDeleteQueue.on('failed', async (message: QueueMessage, e: any) => {
       await sendDeploymentEmail(message, 'failed', e)
     })
   }
 
-  return deleteQueue
+  return modelDeleteQueue
+}
+export async function getDeploymentDeleteQueue() {
+  if (!deploymentDeleteQueue) {
+    const client = await getMongoInstance()
+    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-dead')
+    deploymentDeleteQueue = new PMongoQueue(client.db, 'queue-deletes', {
+      deadQueue: deleteDeadQueue,
+      maxRetries: 2,
+      visibility: 60 * 9,
+    })
+
+    deploymentDeleteQueue.on('succeeded', async (message: QueueMessage) => {
+      await sendDeploymentEmail(message, 'succeeded')
+    })
+
+    deploymentDeleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
+      await sendDeploymentEmail(message, 'retrying', e)
+    })
+
+    deploymentDeleteQueue.on('failed', async (message: QueueMessage, e: any) => {
+      await sendDeploymentEmail(message, 'failed', e)
+    })
+  }
+
+  return deploymentDeleteQueue
 }
 export async function getUploadQueue() {
   if (!uploadQueue) {
