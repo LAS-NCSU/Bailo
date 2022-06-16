@@ -33,11 +33,6 @@ export async function filterVersion<T>(user: UserDoc, unfiltered: T): Promise<T>
   return Array.isArray(unfiltered) ? (filtered as unknown as T) : filtered[0]
 }
 
-// export async function markVersionDeleted(_id: VersionId) {
-//   const versionRecord = await VersionModel.findOne(_id)
-//   return VersionModel.findByIdAndUpdate(_id, { state: { ...versionRecord.state, deleted: true } })
-// }
-
 export async function findVersionById(user: UserDoc, id: ModelId, opts?: GetVersionOptions) {
   let version = VersionModel.findById(id)
   if (opts?.thin) version = version.select({ state: 0, logs: 0, metadata: 0 })

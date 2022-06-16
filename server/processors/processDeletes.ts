@@ -7,7 +7,7 @@ import { getDeploymentDeleteQueue, getModelDeleteQueue } from '../utils/queues'
 import logger from '../utils/logger'
 import { getAccessToken } from '../routes/v1/registryAuth'
 import { getUserByInternalId } from '../services/user'
-import { findDeploymentById, markDeploymentDeleted } from '../services/deployment'
+import { findDeploymentById, markDeploymentDeleted, findDeploymentsByModelVersion } from '../services/deployment'
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: !config.get('registry.insecure'),
@@ -122,7 +122,7 @@ export async function processModelDelete() {
     try {
       const startTime = new Date()
 
-      const { modelId, userId, versionId } = msg.payload
+      const { userId, versionId } = msg.payload
 
       const user = await getUserByInternalId(userId)
 
@@ -162,6 +162,18 @@ export async function processModelDelete() {
         version.log('info', 'Deleted model version')
         vlog.info('Marking model version as deleted')
         await markVersionState(user, version._id, 'deleted')
+        // TODO
+        // If I delete/retire a model version:
+        // - Find all deployments of that model who's versions are less than or equal to that version
+        //     - Determine if all deplopments are deleted:
+        //         - Yes: Delete model version, this will let the container be destoryed.
+        //         - No: Depricate model version and allow no new deployments. This will preserve the model container.
+        // - If model has no deployments and has not been approved:
+        //     - Delete
+
+        // Total Clear:
+        //     - Delete all versions of this model and deployments
+        vlog.info('Finding related model deployments')
         const time = prettyMs(new Date().getTime() - startTime.getTime())
         await version.log('info', `Deleted model version with tag '${externalImage}' in ${time}`)
       }

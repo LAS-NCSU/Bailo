@@ -17,7 +17,7 @@ import { getUiConfig } from './routes/v1/uiConfig'
 import { connectToMongoose } from './utils/database'
 import { ensureBucketExists } from './utils/minio'
 import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
-import { getVersion, putVersion, resetVersionApprovals } from './routes/v1/version'
+import { getVersion, putVersion, resetVersionApprovals, retireVersion } from './routes/v1/version'
 import {
   getDeployment,
   getCurrentUserDeployments,
@@ -86,6 +86,7 @@ app.prepare().then(async () => {
   server.get('/api/v1/version/:id', ...getVersion)
   server.put('/api/v1/version/:id', ...putVersion)
   server.post('/api/v1/version/:id/reset-approvals', ...resetVersionApprovals)
+  server.post('/api/v1/version/:id/retire', ...retireVersion)
 
   server.get('/api/v1/schemas', ...getSchemas)
   server.get('/api/v1/schema/default', ...getDefaultSchema)
