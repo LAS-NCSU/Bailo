@@ -33,8 +33,8 @@ export async function getMongoInstance() {
 export async function getModelDeleteQueue() {
   if (!modelDeleteQueue) {
     const client = await getMongoInstance()
-    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-dead')
-    modelDeleteQueue = new PMongoQueue(client.db, 'queue-deletes', {
+    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-model-dead')
+    modelDeleteQueue = new PMongoQueue(client.db, 'queue-deletes-model', {
       deadQueue: deleteDeadQueue,
       maxRetries: 2,
       visibility: 60 * 9,
@@ -58,8 +58,8 @@ export async function getModelDeleteQueue() {
 export async function getDeploymentDeleteQueue() {
   if (!deploymentDeleteQueue) {
     const client = await getMongoInstance()
-    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-dead')
-    deploymentDeleteQueue = new PMongoQueue(client.db, 'queue-deletes', {
+    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-deployment-dead')
+    deploymentDeleteQueue = new PMongoQueue(client.db, 'queue-deletes-deployment', {
       deadQueue: deleteDeadQueue,
       maxRetries: 2,
       visibility: 60 * 9,

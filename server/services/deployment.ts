@@ -33,21 +33,6 @@ export async function filterDeployment<T>(user: UserDoc, unfiltered: T): Promise
   return Array.isArray(unfiltered) ? (filtered as unknown as T) : filtered[0]
 }
 
-export async function findDeploymentsByModelVersion(user: UserDoc, id: ModelId, version: string) {
-  // const deployments = DeploymentModel.findById(id).
-  // const deployments = DeploymentModel.aggregate
-  const deployments = DeploymentModel.find({
-    model: id,
-    metadata: {
-      highLevelDetails: {
-        initialVersionRequest: version,
-      },
-    },
-  })
-
-  
-}
-
 export async function findDeploymentByUuid(user: UserDoc, uuid: string, opts?: GetDeploymentOptions) {
   let deployment = DeploymentModel.findOne({ uuid })
   if (opts?.populate) deployment = deployment.populate('model')

@@ -105,7 +105,7 @@ app.prepare().then(async () => {
 
   server.get('/api/v1/registry_auth', ...getDockerRegistryAuth)
 
-  await Promise.all([processUploads(), processDeployments(), processDeploymentDelete()])
+  await Promise.all([processUploads(), processDeployments(), processDeploymentDelete(), processModelDelete()])
 
   pullBuilderImage()
   

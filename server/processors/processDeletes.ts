@@ -2,12 +2,12 @@ import config from 'config'
 import prettyMs from 'pretty-ms'
 import https from 'https'
 import { findVersionById, markVersionState } from 'server/services/version'
-import { ModelDoc } from 'server/models/Model'
+import { Model } from 'server/models/Model'
 import { getDeploymentDeleteQueue, getModelDeleteQueue } from '../utils/queues'
 import logger from '../utils/logger'
 import { getAccessToken } from '../routes/v1/registryAuth'
 import { getUserByInternalId } from '../services/user'
-import { findDeploymentById, markDeploymentDeleted, findDeploymentsByModelVersion } from '../services/deployment'
+import { findDeploymentById, markDeploymentDeleted } from '../services/deployment'
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: !config.get('registry.insecure'),
@@ -41,7 +41,11 @@ async function deleteImage(
     logger.info({
       status: res.status,
     })
-    return res.json()
+    if (res.status === 200) {
+      return res.json()
+    }
+
+    throw new Error(`Failed to retrieve image: status:${res.status}`)
   })
 
   return fetch(`${registry}/${tagNamespace}/${modelId}/manifests/${manifest.config.digest}`, {
@@ -143,11 +147,11 @@ export async function processModelDelete() {
         throw new Error(`Model version id: ${versionId} already deleted.`)
       }
 
-      const { name: modelID, version: modelVersion } = version.metadata.highLevelDetails
+      const { uuid: modelUuid } = version.model as Model
 
-      const imageDeleteRes = await deleteImage(user.id, modelID, modelVersion, version.log)
+      const imageDeleteRes = await deleteImage('internal', modelUuid, version.version, version.log)
 
-      const externalImage = `${config.get('registry.host')}/${user.id}/${modelID}:${modelVersion}`
+      const externalImage = `${config.get('registry.host')}/${user.id}/${modelUuid}:${version.version}`
       if (imageDeleteRes.status === 401) {
         version.log('info', `User is not Authorized to delete: ${externalImage}`)
         throw new Error(`User is not Authorized to delete: ${externalImage}`)
@@ -173,12 +177,11 @@ export async function processModelDelete() {
 
         // Total Clear:
         //     - Delete all versions of this model and deployments
-        vlog.info('Finding related model deployments')
         const time = prettyMs(new Date().getTime() - startTime.getTime())
         await version.log('info', `Deleted model version with tag '${externalImage}' in ${time}`)
       }
     } catch (e) {
-      logger.error({ error: e, deploymentId: msg.payload.deploymentId }, 'Error occurred whilst deleting deployment')
+      logger.error({ error: e, versionId: msg.payload.versionId }, 'Error occurred whilst deleting deployment')
       throw e
     }
   })

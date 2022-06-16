@@ -96,11 +96,7 @@ function Model() {
   }
 
   const onRollbackVersion = async () => {
-    if (versions.length > 0) {
-      // Get UUID of most recent non-deleted version.
-      const versid = versions.find((elem) => !elem.deleted)._id
-      await postEndpoint(`/api/v1/api/v1/version/${versid}/retire`, {}).then(() => router.reload())
-    }
+    await postEndpoint(`/api/v1/version/${version?._id}/retire`, {}).then(() => router.reload())
   }
 
   const onCancelDelete = () => {
