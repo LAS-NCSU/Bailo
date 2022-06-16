@@ -15,6 +15,11 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import MuiLink from '@mui/material/Link'
 import Snackbar from '@mui/material/Snackbar'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 import copy from 'copy-to-clipboard'
 import UploadIcon from '@mui/icons-material/Upload'
 import EditIcon from '@mui/icons-material/Edit'
@@ -74,6 +79,37 @@ function Model() {
   const { deployments, isDeploymentsLoading, isDeploymentsError } = useGetModelDeployments(uuid)
 
   const onVersionChange = setTargetValue(setSelectedVersion)
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmRollbackOpen, setConfirmRollbackOpen] = useState(false)
+
+  const handleToggleConfirmDialog = () => {
+    setConfirmOpen(!confirmOpen)
+  }
+
+  const handleToggleConfirmRollbackDialog = () => {
+    setConfirmRollbackOpen(!confirmRollbackOpen)
+  }
+
+  const onConfirmDelete = async () => {
+    await postEndpoint(`/api/v1/model/${uuid}/retire`, {}).then(() => router.push(`/`))
+  }
+
+  const onRollbackVersion = async () => {
+    if (versions.length > 0) {
+      // Get UUID of most recent non-deleted version.
+      const versid = versions.find((elem) => !elem.deleted)._id
+      await postEndpoint(`/api/v1/api/v1/version/${versid}/retire`, {}).then(() => router.reload())
+    }
+  }
+
+  const onCancelDelete = () => {
+    handleToggleConfirmDialog();
+  }
+
+  const onCancelRollback = () => {
+    handleToggleConfirmRollbackDialog();
+  }
 
   const handleGroupChange = (_event: React.SyntheticEvent, newValue: TabOptions) => {
     setGroup(newValue)
@@ -292,11 +328,34 @@ function Model() {
             {deployments.map((deployment: Deployment) => (
               <Box key={`deployment-${deployment.uuid}`}>
                 <Link href={`/deployment/${deployment.uuid}`} passHref>
-                  <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
-                    {deployment.metadata.highLevelDetails.name}
-                  </MuiLink>
+                  <Box>
+                    {!deployment.deleted && (
+                      <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
+                        {deployment.metadata.highLevelDetails.name}
+                      </MuiLink>
+                    )}
+                    {deployment.deleted && (
+                      <Grid container sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Grid item xs={8} md={8}>
+                          <MuiLink
+                            variant='h5'
+                            sx={{ fontWeight: '500', textDecoration: 'line-through', fontStyle: 'italic' }}
+                          >
+                            {deployment.metadata.highLevelDetails.name}
+                          </MuiLink>
+                        </Grid>
+                        <Grid item xs={4} md={4}>
+                          <Typography
+                            variant='body1'
+                            sx={{ marginBottom: 2, textAlign: 'right', marginRight: 2, color: 'error.main' }}
+                          >
+                            Deployment Deleted
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    )}
+                  </Box>
                 </Link>
-
                 <Typography variant='body1' sx={{ marginBottom: 2 }}>
                   Contacts: {deployment.metadata.contacts.requester}, {deployment.metadata.contacts.secondPOC}
                 </Typography>
@@ -333,9 +392,75 @@ function Model() {
             <Typography variant='h6' sx={{ mb: 1 }}>
               Danger Zone
             </Typography>
-            <Button variant='contained' color='error'>
-              Delete Model
-            </Button>
+            <Box sx={{ p: 2 }}>
+              <Grid container spacing={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Grid item xs={4} md={2}>
+                  <Button variant='contained' color='error' onClick={handleToggleConfirmDialog}>
+                    Delete Model
+                  </Button>
+                </Grid>
+                <Grid item xs={8} md={10}>
+                  <Typography variant='body1'>
+                    Warning: This will delete{' '}
+                    <Box component='span' fontWeight='fontWeightMedium'>
+                      all versions and deployments{' '}
+                    </Box>
+                    of this model
+                  </Typography>
+                </Grid>
+                <Grid item xs={4} md={2}>
+                  <Button variant='contained' color='warning' onClick={handleToggleConfirmRollbackDialog}>
+                    Rollback
+                  </Button>
+                </Grid>
+                <Grid item xs={8} md={10}>
+                  <Typography variant='body1'>
+                    Warning: This will delete{' '}
+                    <Box component='span' fontWeight='fontWeightMedium'>
+                      the most recent version{' '}
+                    </Box>
+                    of this model
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+            <Dialog open={confirmOpen} onClose={handleToggleConfirmDialog}>
+              <DialogTitle id='alert-dialog-title'>Confirm Delete Model</DialogTitle>
+              <DialogContent>
+                <DialogContentText id='alert-dialog-description'>
+                  Are you sure you want to delete this model, including all versions and deployments?
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button color='secondary' variant='outlined' onClick={onCancelDelete}>
+                  Cancel
+                </Button>
+                <Button variant='contained' onClick={onConfirmDelete} data-test='confirmButton' color='error'>
+                  Confirm
+                </Button>
+              </DialogActions>
+            </Dialog>
+            <Dialog open={confirmRollbackOpen} onClose={handleToggleConfirmRollbackDialog}>
+              <DialogTitle id='rollback-dialog-title'>Confirm Version Rollback</DialogTitle>
+              <DialogContent>
+                <DialogContentText id='rollback-dialog-description'>
+                  Are you sure you want to delete the most recent version of this model?
+                </DialogContentText>
+              </DialogContent>
+              <DialogActions>
+                <Button color='secondary' variant='outlined' onClick={onCancelRollback}>
+                  Cancel
+                </Button>
+                <Button
+                  variant='contained'
+                  onClick={onRollbackVersion}
+                  data-test='confirmRollbackButton'
+                  color='warning'
+                >
+                  Confirm
+                </Button>
+              </DialogActions>
+            </Dialog>
           </>
         )}
       </Paper>
