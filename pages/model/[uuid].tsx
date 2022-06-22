@@ -87,7 +87,7 @@ function Model() {
     setConfirmOpen(!confirmOpen)
   }
 
-  const handleToggleConfirmRollbackDialog = () => {
+  const handleToggleConfirmVersionDeleteDialog = () => {
     setConfirmRollbackOpen(!confirmRollbackOpen)
   }
 
@@ -103,8 +103,8 @@ function Model() {
     handleToggleConfirmDialog();
   }
 
-  const onCancelRollback = () => {
-    handleToggleConfirmRollbackDialog();
+  const onCancelDeleteVersion = () => {
+    handleToggleConfirmVersionDeleteDialog();
   }
 
   const handleGroupChange = (_event: React.SyntheticEvent, newValue: TabOptions) => {
@@ -390,7 +390,7 @@ function Model() {
             </Typography>
             <Box sx={{ p: 2 }}>
               <Grid container spacing={2} sx={{ display: 'flex', alignItems: 'center' }}>
-                <Grid item xs={4} md={2}>
+                {/* <Grid item xs={4} md={2}>
                   <Button variant='contained' color='error' onClick={handleToggleConfirmDialog}>
                     Delete Model
                   </Button>
@@ -403,24 +403,24 @@ function Model() {
                     </Box>
                     of this model
                   </Typography>
-                </Grid>
+                </Grid> */}
                 <Grid item xs={4} md={2}>
-                  <Button variant='contained' color='warning' onClick={handleToggleConfirmRollbackDialog}>
-                    Rollback
+                  <Button variant='contained' color='error' onClick={handleToggleConfirmVersionDeleteDialog}>
+                    Delete/Retire Version
                   </Button>
                 </Grid>
                 <Grid item xs={8} md={10}>
                   <Typography variant='body1'>
-                    Warning: This will delete{' '}
+                    Warning: This will delete/retire{' '}
                     <Box component='span' fontWeight='fontWeightMedium'>
-                      the most recent version{' '}
+                      the currently set version{' '}
                     </Box>
                     of this model
                   </Typography>
                 </Grid>
               </Grid>
             </Box>
-            <Dialog open={confirmOpen} onClose={handleToggleConfirmDialog}>
+            {/* <Dialog open={confirmOpen} onClose={handleToggleConfirmDialog}>
               <DialogTitle id='alert-dialog-title'>Confirm Delete Model</DialogTitle>
               <DialogContent>
                 <DialogContentText id='alert-dialog-description'>
@@ -435,24 +435,19 @@ function Model() {
                   Confirm
                 </Button>
               </DialogActions>
-            </Dialog>
-            <Dialog open={confirmRollbackOpen} onClose={handleToggleConfirmRollbackDialog}>
-              <DialogTitle id='rollback-dialog-title'>Confirm Version Rollback</DialogTitle>
+            </Dialog> */}
+            <Dialog open={confirmRollbackOpen} onClose={handleToggleConfirmVersionDeleteDialog}>
+              <DialogTitle id='rollback-dialog-title'>Confirm Version Delete/Retire</DialogTitle>
               <DialogContent>
                 <DialogContentText id='rollback-dialog-description'>
-                  Are you sure you want to delete the most recent version of this model?
+                  Are you sure you want to delete the currently set version of this model?
                 </DialogContentText>
               </DialogContent>
               <DialogActions>
-                <Button color='secondary' variant='outlined' onClick={onCancelRollback}>
+                <Button color='error' variant='outlined' onClick={onCancelDeleteVersion}>
                   Cancel
                 </Button>
-                <Button
-                  variant='contained'
-                  onClick={onRollbackVersion}
-                  data-test='confirmRollbackButton'
-                  color='warning'
-                >
+                <Button variant='contained' onClick={onRollbackVersion} data-test='confirmRollbackButton' color='error'>
                   Confirm
                 </Button>
               </DialogActions>
