@@ -1,14 +1,13 @@
 import { castArray } from 'lodash'
 import VersionModel, { VersionDoc } from '../models/Version'
 
-import { Version, User, ModelId, VersionId } from '../../types/interfaces'
+import { Version, ModelId } from '../../types/interfaces'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
 import { BadReq, Forbidden } from '../utils/result'
 import { createSerializer, SerializerOptions } from '../utils/logger'
 import { serializedModelFields } from './model'
 import { UserDoc } from '../models/User'
-import ModelModel from '../models/Model'
 
 const authorisation = new AuthorisationBase()
 
