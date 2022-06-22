@@ -49,7 +49,7 @@ module.exports = {
       documentationUrl: 'https://example.com',
     },
     registry: {
-      host: 'localhost:8080',
+      host: 'bailo-public.ncsu-las.net',
     },
     uploadWarning: {
       showWarning: true,
@@ -81,6 +81,12 @@ module.exports = {
     protocol: 'http',
     host: 'localhost',
     port: 8080,
+  },
+
+  s3: {
+    bucket: 'las-bailo',
+    region: 'us-east-1',
+    chunksize: '20971520',
   },
 
   listen: 3000,

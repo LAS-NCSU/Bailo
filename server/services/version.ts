@@ -17,6 +17,24 @@ interface GetVersionOptions {
   populate?: boolean
 }
 
+export function isVersionRetired(version: Version): boolean {
+  const {
+    state: {
+      build: { state },
+    },
+    built,
+  } = version
+  if (state === 'deleted') {
+    return true
+  }
+
+  if (!built) {
+    return true
+  }
+
+  return false
+}
+
 export function serializedVersionFields(): SerializerOptions {
   return {
     mandatory: ['_id', 'version', 'metadata.highLevelDetails.name'],

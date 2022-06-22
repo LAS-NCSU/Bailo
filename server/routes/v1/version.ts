@@ -4,7 +4,7 @@ import bodyParser from 'body-parser'
 import { ensureUserRole } from '../../utils/user'
 import { createVersionRequests } from '../../services/request'
 import { Forbidden, NotFound, BadReq } from '../../utils/result'
-import { findVersionById } from '../../services/version'
+import { findVersionById, isVersionRetired } from '../../services/version'
 import { ApprovalStates } from '../../models/Deployment'
 
 export const getVersion = [
@@ -63,9 +63,19 @@ export const resetVersionApprovals = [
     if (!version) {
       throw BadReq({ code: 'version_not_found' }, 'Unabled to find version for requested deployment')
     }
+
     if (user?.id !== version.metadata.contacts.uploader) {
       throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to do this operation.')
     }
+
+    if (isVersionRetired(version)) {
+      throw BadReq({ code: 'version_retired' }, 'Unable to reset approvals on a model version that is deleted/unbuilt.')
+    }
+
+    if (version.managerApproved !== ApprovalStates.Accepted || version.reviewerApproved !== ApprovalStates.Accepted) {
+      return res.json(version)
+    }
+
     version.managerApproved = ApprovalStates.NoResponse
     version.reviewerApproved = ApprovalStates.NoResponse
     await version.save()
@@ -88,8 +98,13 @@ export const retireVersion = [
     if (!version) {
       throw BadReq({ code: 'version_not_found' }, 'Unabled to find version for requested deployment')
     }
+
     if (user?.id !== version.metadata.contacts.uploader) {
       throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to do this operation.')
+    }
+
+    if (isVersionRetired(version)) {
+      throw BadReq({ code: 'version_retired' }, 'Unable to retire a model version that is deleted/unbuilt.')
     }
 
     req.log.info(

@@ -15,6 +15,10 @@ interface GetDeploymentOptions {
   populate?: boolean
 }
 
+export function isDeploymentRetired(deployment: Deployment): boolean {
+  return deployment.deleted
+}
+
 export function serializedDeploymentFields(): SerializerOptions {
   return {
     mandatory: ['_id', 'uuid', 'name'],

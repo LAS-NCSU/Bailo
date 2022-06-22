@@ -9,12 +9,13 @@ import { ensureUserRole } from '../../utils/user'
 import { createDeploymentRequests } from '../../services/request'
 import { BadReq, NotFound, Forbidden } from '../../utils/result'
 import { findModelByUuid } from '../../services/model'
-import { findVersionByName } from '../../services/version'
+import { findVersionByName, isVersionRetired } from '../../services/version'
 import {
   createDeployment,
   findDeploymentByUuid,
   findDeployments,
   findDeploymentsByUuid,
+  isDeploymentRetired,
 } from '../../services/deployment'
 import { ApprovalStates } from '../../models/Deployment'
 import { findSchemaByRef } from '../../services/schema'
@@ -55,13 +56,13 @@ export const deleteDeployments = [
 
     // TODO: Is this input santized anywhere?
     const deployments = (await findDeploymentsByUuid(user.id, body.uuids)).filter(
-      (deployment: Deployment) => deployment.deleted === false
+      (deployment: Deployment) => isDeploymentRetired(deployment) === false
     )
 
     if (!deployments.length) {
       throw NotFound(
         { code: 'deployments_not_found', uuids: body.uuids },
-        `Unable to find deployments with uuids: '${body.uuids}'`
+        `No unretired/existing deployments found with uuids: '${body.uuids}'`
       )
     }
 
@@ -138,6 +139,23 @@ export const postDeployment = [
       )
     }
 
+    req.log.info(
+      { code: 'requesting_model_version', model, version: body.highLevelDetails.initialVersionRequested },
+      'Requesting model version'
+    )
+    const version = await findVersionByName(req.user!, model._id, body.highLevelDetails.initialVersionRequested)
+
+    if (!version) {
+      throw NotFound(
+        { code: 'version_not_found', version: body.highLevelDetails.initialVersionRequested },
+        `Unable to find version: '${body.highLevelDetails.initialVersionRequested}'`
+      )
+    }
+
+    if (isVersionRetired(version)) {
+      throw BadReq({ code: 'version_retired' }, 'Unable to create a deployment for a retired model version.')
+    }
+
     const name = body.highLevelDetails.name
       .toLowerCase()
       .replace(/[^a-z 0-9]/g, '')
@@ -158,19 +176,6 @@ export const postDeployment = [
 
     req.log.info({ code: 'saving_deployment', deployment }, 'Saving deployment model')
     await deployment.save()
-
-    req.log.info(
-      { code: 'requesting_model_version', model, version: body.highLevelDetails.initialVersionRequested },
-      'Requesting model version'
-    )
-    const version = await findVersionByName(req.user!, model._id, body.highLevelDetails.initialVersionRequested)
-
-    if (!version) {
-      throw NotFound(
-        { code: 'version_not_found', version: body.highLevelDetails.initialVersionRequested },
-        `Unable to find version: '${body.highLevelDetails.initialVersionRequested}'`
-      )
-    }
 
     const managerRequest = await createDeploymentRequests({
       version,
@@ -201,6 +206,10 @@ export const resetDeploymentApprovals = [
       )
     }
 
+    if (isDeploymentRetired(deployment)) {
+      throw BadReq({ code: 'deployment_retired' }, 'Unable to reset approvals on a deployment that is retired.')
+    }
+
     const version = await findVersionByName(
       user!,
       deployment.model,
@@ -212,6 +221,14 @@ export const resetDeploymentApprovals = [
         `Unabled to find version for requested deployment: '${uuid}'`
       )
     }
+
+    if (isVersionRetired(version)) {
+      throw BadReq(
+        { code: 'version_retired' },
+        'Unable to reset approvals on a deployment with a model version that is deleted/unbuilt.'
+      )
+    }
+
     deployment.managerApproved = ApprovalStates.NoResponse
     await deployment.save()
     req.log.info({ code: 'reset_deployment_approvals', deployment }, 'User resetting deployment approvals')
