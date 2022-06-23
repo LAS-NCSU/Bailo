@@ -71,7 +71,7 @@ export async function findVersionByName(user: UserDoc, model: ModelId, name: str
 export async function findModelVersions(user: UserDoc, model: ModelId, opts?: GetVersionOptions) {
   const query = { model }
   if (opts?.deleted === false) {
-    query['state.build.state'] = { $ne: 'deleated' }
+    query['state.build.state'] = { $ne: 'deleted' }
   }
   let versions = VersionModel.find(query).sort({ createdAt: -1 })
 

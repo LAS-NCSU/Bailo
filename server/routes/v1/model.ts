@@ -134,14 +134,14 @@ export const getModelVersion = [
 
     let version
     if (versionName === 'latest') {
-      // version = await findVersionById(req.user!, model.versions[model.versions.length - 1])
       version = await findModelVersions(req.user!, model._id, { deleted: false, limit: 1 })
     } else {
       version = await findVersionByName(req.user!, model._id, versionName)
     }
 
     if (!version) {
-      throw NotFound({ code: 'version_not_found', versionName }, `Unable to find version '${versionName}'`)
+      req.log.info({ code: 'version_not_found', versionName }, `Unable to find version '${versionName}'`)
+      return res.json({})
     }
 
     req.log.info({ code: 'fetch_version_for_model', model, version }, 'User finding specific version for model')
