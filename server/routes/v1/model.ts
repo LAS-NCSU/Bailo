@@ -114,7 +114,7 @@ export const getModelVersions = [
       throw NotFound({ code: 'model_not_found', uuid }, `Unable to find model '${uuid}'`)
     }
 
-    const versions = await findModelVersions(req.user!, model._id, { thin: true })
+    const versions = await findModelVersions(req.user!, model._id)
 
     req.log.info({ code: 'fetch_versions_for_model', model }, 'User fetching versions for specified model')
     return res.json(versions)
