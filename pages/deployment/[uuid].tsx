@@ -101,7 +101,7 @@ export default function Deployment() {
   }
 
   const onCancelDelete = () => {
-    handleToggleConfirmDialog();
+    handleToggleConfirmDialog()
   }
 
   const { currentUser, isCurrentUserLoading, isCurrentUserError } = useGetCurrentUser()

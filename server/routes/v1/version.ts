@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { getModelDeleteQueue } from 'server/utils/queues'
 import bodyParser from 'body-parser'
+import { getModelDeleteQueue } from '../../utils/queues'
 import { ensureUserRole } from '../../utils/user'
 import { createVersionRequests } from '../../services/request'
 import { Forbidden, NotFound, BadReq } from '../../utils/result'

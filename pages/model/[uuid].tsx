@@ -100,11 +100,11 @@ function Model() {
   }
 
   const onCancelDelete = () => {
-    handleToggleConfirmDialog();
+    handleToggleConfirmDialog()
   }
 
   const onCancelDeleteVersion = () => {
-    handleToggleConfirmVersionDeleteDialog();
+    handleToggleConfirmVersionDeleteDialog()
   }
 
   const handleGroupChange = (_event: React.SyntheticEvent, newValue: TabOptions) => {
