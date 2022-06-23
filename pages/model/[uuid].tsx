@@ -278,11 +278,13 @@ function Model() {
                   label='Version'
                   onChange={onVersionChange}
                 >
-                  {versions.map((versionObj: Version) => (
-                    <MenuItem key={`item-${versionObj._id}`} value={versionObj.version}>
-                      {versionObj.version}
-                    </MenuItem>
-                  ))}
+                  {versions
+                    .filter((v) => !(v.state?.build?.state === 'deleted'))
+                    .map((versionObj: Version) => (
+                      <MenuItem key={`item-${versionObj._id}`} value={versionObj.version}>
+                        {versionObj.version}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
             </Stack>
