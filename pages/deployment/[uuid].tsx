@@ -179,18 +179,20 @@ export default function Deployment() {
           <Stack direction='row' spacing={2}>
             <ApprovalsChip approvals={[deployment?.managerApproved]} />
             <Divider orientation='vertical' flexItem />
-            <Button
-              id='model-actions-button'
-              aria-controls='model-actions-menu'
-              aria-haspopup='true'
-              aria-expanded={actionOpen ? 'true' : undefined}
-              onClick={actionMenuClicked}
-              variant='outlined'
-              data-test='requestDeploymentButton'
-              endIcon={actionOpen ? <UpArrow /> : <DownArrow />}
-            >
-              Actions
-            </Button>
+            {!deployment.deleted && (
+              <Button
+                id='model-actions-button'
+                aria-controls='model-actions-menu'
+                aria-haspopup='true'
+                aria-expanded={actionOpen ? 'true' : undefined}
+                onClick={actionMenuClicked}
+                variant='outlined'
+                data-test='requestDeploymentButton'
+                endIcon={actionOpen ? <UpArrow /> : <DownArrow />}
+              >
+                Actions
+              </Button>
+            )}
             {deployment.deleted && (
               <Typography
                 variant='body1'
@@ -237,9 +239,11 @@ export default function Deployment() {
               <Typography variant='h6' sx={{ mb: 1 }}>
                 Danger Zone
               </Typography>
-              <Button variant='contained' color='error' onClick={handleToggleConfirmDialog}>
-                Delete Deployment
-              </Button>
+              {!deployment.deleted && (
+                <Button variant='contained' color='error' onClick={handleToggleConfirmDialog}>
+                  Delete Deployment
+                </Button>
+              )}
               <Dialog open={confirmOpen} onClose={handleToggleConfirmDialog}>
                 <DialogTitle id='alert-dialog-title'>Confirm Delete Deployment</DialogTitle>
                 <DialogContent>
