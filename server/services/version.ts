@@ -14,6 +14,8 @@ const authorisation = new AuthorisationBase()
 interface GetVersionOptions {
   thin?: boolean
   populate?: boolean
+  deleted?: boolean
+  limit?: number
 }
 
 export function isVersionRetired(version: Version): boolean {
@@ -67,9 +69,17 @@ export async function findVersionByName(user: UserDoc, model: ModelId, name: str
 }
 
 export async function findModelVersions(user: UserDoc, model: ModelId, opts?: GetVersionOptions) {
-  let versions = VersionModel.find({ model })
+  const query = { model }
+  if (opts?.deleted === false) {
+    query['state.build.state'] = { $ne: 'deleated' }
+  }
+  let versions = VersionModel.find(query).sort({ createdAt: -1 })
+
   if (opts?.thin) versions = versions.select({ state: 0, logs: 0, metadata: 0 })
   if (opts?.populate) versions = versions.populate('model')
+  if (opts?.limit) {
+    versions.limit(opts.limit)
+  }
 
   return filterVersion(user, await versions)
 }
