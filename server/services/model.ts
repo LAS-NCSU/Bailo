@@ -1,9 +1,9 @@
-import { Types } from 'mongoose'
+import { Model, Types } from 'mongoose'
 import { castArray } from 'lodash'
 
 import { Forbidden } from '../utils/result'
 import ModelModel from '../models/Model'
-import { Model, User } from '../../types/interfaces'
+import { Model, ModelId, User } from '../../types/interfaces'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
 import { SerializerOptions } from '../utils/logger'
@@ -15,6 +15,10 @@ export function serializedModelFields(): SerializerOptions {
   return {
     mandatory: ['_id', 'uuid', 'currentMetadata.highLevelDetails.name', 'schemaRef'],
   }
+}
+
+export async function markModelDeleted(_id: ModelId) {
+  return ModelModel.findByIdAndUpdate(_id, { deleted: true })
 }
 
 export async function filterModel<T>(user: UserDoc, unfiltered: T): Promise<T> {

@@ -2,7 +2,8 @@ import config from 'config'
 import prettyMs from 'pretty-ms'
 import https from 'https'
 import { Model } from 'server/models/Model'
-import { findVersionById, markVersionState } from '../services/version'
+import { markModelDeleted } from 'server/services/model'
+import { findModelVersions, findVersionById, markVersionState } from '../services/version'
 import { getDeploymentDeleteQueue, getModelDeleteQueue } from '../utils/queues'
 import logger from '../utils/logger'
 import { getAccessToken } from '../routes/v1/registryAuth'
@@ -20,7 +21,6 @@ async function deleteImage(
   logFunct: (level: string, msg: string) => Promise<void>
 ): Promise<Response> {
   const registry = `https://${config.get('registry.host')}/v2`
-  // const externalImage = `${config.get('registry.host')}/${user.id}/${tag}`
 
   logFunct('info', `Requesting a delete of image with tag. /${tagNamespace}/${modelId}/manifests/${modelVersion}`)
 
@@ -177,6 +177,14 @@ export async function processModelDelete() {
 
         // Total Clear:
         //     - Delete all versions of this model and deployments
+
+        // Check to see if a model has any non-delted versions
+        // If there are no non-deleted version mark the model as deleted.
+        const nonDeletedVersions = await findModelVersions(user, version.model, { deleted: false })
+        if (!nonDeletedVersions || nonDeletedVersions.length === 0) {
+          await markModelDeleted(version.model)
+        }
+
         const time = prettyMs(new Date().getTime() - startTime.getTime())
         await version.log('info', `Deleted model version with tag '${externalImage}' in ${time}`)
       }
