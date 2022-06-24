@@ -96,7 +96,19 @@ function Model() {
   }
 
   const onRollbackVersion = async () => {
-    await postEndpoint(`/api/v1/version/${version?._id}/retire`, {}).then(() => router.reload())
+    await postEndpoint(`/api/v1/version/${version?._id}/retire`, {}).then(() => {
+      // If there will be at least one non-deleted version left, just refresh the page
+      const remainingNonDeleted = versions.filter(
+        (d) => d._id !== version?._id && !(d.state?.build?.state === 'deleted')
+      ).length
+      if (remainingNonDeleted > 0) {
+        router.reload()
+      }
+      // Or, if there won't be any non-deleted versions left, navigate to /
+      else {
+        router.push('/')
+      }
+    })
   }
 
   const onCancelDelete = () => {
