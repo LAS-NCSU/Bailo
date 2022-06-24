@@ -182,7 +182,17 @@ function Model() {
   const requestApprovalReset = async () => {
     await postEndpoint(`/api/v1/version/${version?._id}/reset-approvals`, {}).then((res) => res.json())
   }
-
+  // If "version" has been retrieved from the server, but it is an empty object, then all versions
+  // of this model have been deleted. Show an error message.
+  if (version && Object.keys(version).length === 0) {
+    return (
+      <Wrapper>
+        <Paper sx={{ p: 3 }}>
+          <Alert severity='error'>No Versions Available (Have all versions of this model been deleted?)</Alert>
+        </Paper>
+      </Wrapper>
+    )
+  }
   return (
     <Wrapper title={`Model: ${version.metadata.highLevelDetails.name}`} page='model'>
       <Paper sx={{ p: 3 }}>
