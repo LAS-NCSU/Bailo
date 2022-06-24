@@ -77,7 +77,7 @@ export default function ExploreModels() {
 
           {models &&
             models
-              .filter((v) => !v.deleted)
+              .filter((v) => !v?.deleted)
               .map((model: Model, index: number) => (
                 <Box key={model.uuid}>
                   <Link href={`/model/${model.uuid}`} passHref>
