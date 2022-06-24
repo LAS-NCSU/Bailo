@@ -1,4 +1,4 @@
-import { Model, Types } from 'mongoose'
+import { Types } from 'mongoose'
 import { castArray } from 'lodash'
 
 import { Forbidden } from '../utils/result'

@@ -97,10 +97,15 @@ function Model() {
 
   const onRollbackVersion = async () => {
     await postEndpoint(`/api/v1/version/${version?._id}/retire`, {}).then(() => {
+      if (!versions) {
+        router.push('/')
+        return
+      }
+
       // If there will be at least one non-deleted version left, just refresh the page
-      const remainingNonDeleted = versions.filter(
-        (d) => d._id !== version?._id && !(d.state?.build?.state === 'deleted')
-      ).length
+      const remainingNonDeleted =
+        versions?.filter((d) => d._id !== version?._id && !(d.state?.build?.state === 'deleted')).length ?? 0
+
       if (remainingNonDeleted > 0) {
         router.reload()
       }
@@ -198,7 +203,7 @@ function Model() {
   // of this model have been deleted. Show an error message.
   if (version && Object.keys(version).length === 0) {
     return (
-      <Wrapper>
+      <Wrapper title={undefined} page=''>
         <Paper sx={{ p: 3 }}>
           <Alert severity='error'>No Versions Available (Have all versions of this model been deleted?)</Alert>
         </Paper>
