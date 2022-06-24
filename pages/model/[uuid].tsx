@@ -95,6 +95,10 @@ function Model() {
     await postEndpoint(`/api/v1/model/${uuid}/retire`, {}).then(() => router.push(`/`))
   }
 
+  const onRequestBuildRetry = async () => {
+    await postEndpoint(`/api/v1/version/${version?._id}/rebuild`).then(() => router.reload())
+  }
+
   const onRollbackVersion = async () => {
     await postEndpoint(`/api/v1/version/${version?._id}/retire`, {}).then(() => {
       // If there will be at least one non-deleted version left, just refresh the page
@@ -340,7 +344,16 @@ function Model() {
 
         {group === 'compliance' && <ComplianceFlow initialElements={complianceFlow} />}
 
-        {group === 'build' && <TerminalLog logs={version.logs} title='Model Build Logs' />}
+        {group === 'build' && (
+          <Box>
+            <Grid container sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
+              <Button variant='contained' color='warning' onClick={onRequestBuildRetry}>
+                Rebuild
+              </Button>
+            </Grid>
+            <TerminalLog logs={version.logs} title='Model Build Logs' />
+          </Box>
+        )}
 
         {group === 'deployments' && (
           <>
