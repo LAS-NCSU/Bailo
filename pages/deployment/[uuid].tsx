@@ -4,6 +4,7 @@ import Dialog from '@mui/material/Dialog'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
+import DialogActions from '@mui/material/DialogActions'
 import Paper from '@mui/material/Paper'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
@@ -23,6 +24,7 @@ import Stack from '@mui/material/Stack'
 import RestartAlt from '@mui/icons-material/RestartAlt'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
+import Typography from '@mui/material/Typography'
 
 import Link from 'next/link'
 import { useGetDeployment } from '../../data/deployment'
@@ -39,7 +41,7 @@ import { postEndpoint } from '../../data/api'
 
 const ComplianceFlow = dynamic(() => import('../../src/ComplianceFlow'))
 
-type TabOptions = 'overview' | 'compliance' | 'build'
+type TabOptions = 'overview' | 'compliance' | 'build' | 'settings'
 
 function CodeLine({ line }) {
   const [openSnackbar, setOpenSnackbar] = useState(false)
@@ -92,6 +94,15 @@ export default function Deployment() {
   const [tag, setTag] = useState<string>('')
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const actionOpen = anchorEl !== null
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const handleToggleConfirmDialog = () => {
+    setConfirmOpen(!confirmOpen)
+  }
+
+  const onCancelDelete = () => {
+    handleToggleConfirmDialog()
+  }
 
   const { currentUser, isCurrentUserLoading, isCurrentUserError } = useGetCurrentUser()
   const { deployment, isDeploymentLoading, isDeploymentError } = useGetDeployment(uuid)
@@ -151,30 +162,45 @@ export default function Deployment() {
     await postEndpoint(`/api/v1/deployment/${deployment?.uuid}/reset-approvals`, {}).then((res) => res.json())
   }
 
+  const requestDeploymentDelete = async () => {
+    await postEndpoint(`/api/v1/deployment/retire`, { uuids: [deployment?.uuid] }).then(() => router.reload())
+  }
   return (
     <>
       <Wrapper title={`Deployment: ${deployment.metadata.highLevelDetails.name}`} page='deployment'>
         <Box sx={{ textAlign: 'right', pb: 3 }}>
-          <Button variant='outlined' color='primary' startIcon={<Info />} onClick={handleClickOpen}>
-            Show download commands
-          </Button>
+          {!deployment.deleted && (
+            <Button variant='outlined' color='primary' startIcon={<Info />} onClick={handleClickOpen}>
+              Show download commands
+            </Button>
+          )}
         </Box>
         <Paper sx={{ p: 3 }}>
           <Stack direction='row' spacing={2}>
             <ApprovalsChip approvals={[deployment?.managerApproved]} />
             <Divider orientation='vertical' flexItem />
-            <Button
-              id='model-actions-button'
-              aria-controls='model-actions-menu'
-              aria-haspopup='true'
-              aria-expanded={actionOpen ? 'true' : undefined}
-              onClick={actionMenuClicked}
-              variant='outlined'
-              data-test='requestDeploymentButton'
-              endIcon={actionOpen ? <UpArrow /> : <DownArrow />}
-            >
-              Actions
-            </Button>
+            {!deployment.deleted && (
+              <Button
+                id='model-actions-button'
+                aria-controls='model-actions-menu'
+                aria-haspopup='true'
+                aria-expanded={actionOpen ? 'true' : undefined}
+                onClick={actionMenuClicked}
+                variant='outlined'
+                data-test='requestDeploymentButton'
+                endIcon={actionOpen ? <UpArrow /> : <DownArrow />}
+              >
+                Actions
+              </Button>
+            )}
+            {deployment.deleted && (
+              <Typography
+                variant='body1'
+                sx={{ marginBottom: 2, textAlign: 'right', marginRight: 2, color: 'error.main', alignSelf: 'center' }}
+              >
+                Deployment Deleted
+              </Typography>
+            )}
           </Stack>
           <Menu anchorEl={anchorEl as HTMLDivElement} open={actionOpen} onClose={handleMenuClose}>
             <MenuList>
@@ -201,6 +227,41 @@ export default function Deployment() {
           {tab === 'compliance' && <ComplianceFlow initialElements={complianceFlow} />}
 
           {tab === 'build' && <TerminalLog logs={deployment.logs} title='Deployment Build Logs' />}
+
+          {tab === 'settings' && (
+            <>
+              <Typography variant='h6' sx={{ mb: 1 }}>
+                General
+              </Typography>
+
+              <Box sx={{ mb: 4 }} />
+
+              <Typography variant='h6' sx={{ mb: 1 }}>
+                Danger Zone
+              </Typography>
+              {!deployment.deleted && (
+                <Button variant='contained' color='error' onClick={handleToggleConfirmDialog}>
+                  Delete Deployment
+                </Button>
+              )}
+              <Dialog open={confirmOpen} onClose={handleToggleConfirmDialog}>
+                <DialogTitle id='alert-dialog-title'>Confirm Delete Deployment</DialogTitle>
+                <DialogContent>
+                  <DialogContentText id='alert-dialog-description'>
+                    Are you sure you want to delete this deployment
+                  </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                  <Button color='secondary' variant='outlined' onClick={onCancelDelete}>
+                    Cancel
+                  </Button>
+                  <Button variant='contained' onClick={requestDeploymentDelete} data-test='confirmButton' color='error'>
+                    Confirm
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </>
+          )}
         </Paper>
       </Wrapper>
       <Dialog maxWidth='lg' onClose={handleClose} open={open}>

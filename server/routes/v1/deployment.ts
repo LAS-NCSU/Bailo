@@ -1,13 +1,22 @@
 import { Request, Response } from 'express'
 import bodyParser from 'body-parser'
-import { validateSchema } from '../../utils/validateSchema'
 import { customAlphabet } from 'nanoid'
+import { Deployment } from '@/types/interfaces'
+import { getUserById } from '../../services/user'
+import { getDeploymentDeleteQueue } from '../../utils/queues'
+import { validateSchema } from '../../utils/validateSchema'
 import { ensureUserRole } from '../../utils/user'
 import { createDeploymentRequests } from '../../services/request'
 import { BadReq, NotFound, Forbidden } from '../../utils/result'
 import { findModelByUuid } from '../../services/model'
-import { findVersionByName } from '../../services/version'
-import { createDeployment, findDeploymentByUuid, findDeployments } from '../../services/deployment'
+import { findVersionByName, isVersionRetired } from '../../services/version'
+import {
+  createDeployment,
+  findDeploymentByUuid,
+  findDeployments,
+  findDeploymentsByUuid,
+  isDeploymentRetired,
+} from '../../services/deployment'
 import { ApprovalStates } from '../../models/Deployment'
 import { findSchemaByRef } from '../../services/schema'
 
@@ -26,6 +35,61 @@ export const getDeployment = [
 
     req.log.info({ code: 'get_deployment_by_uuid', deployment }, 'Fetching deployment by a given UUID')
     return res.json(deployment)
+  },
+]
+
+export const deleteDeployments = [
+  ensureUserRole('user'),
+  bodyParser.json(),
+  async (req: Request, res: Response) => {
+    req.log.info({ code: 'requesting_deployment_delete' }, 'User requesting deployment delete')
+    const body = req.body as any
+
+    // TODO: validate that this user exists
+    body.user = req.user?.id
+    const user = await getUserById(body.user)
+
+    if (!user) {
+      req.log.error(`Can't request deployment deletion, invalid user`)
+      throw BadReq({ code: 'user not found', user_id: body.user }, 'Unable to find deployment owner')
+    }
+
+    // TODO: Is this input santized anywhere?
+    const deployments = (await findDeploymentsByUuid(user.id, body.uuids)).filter(
+      (deployment: Deployment) => isDeploymentRetired(deployment) === false
+    )
+
+    if (!deployments.length) {
+      throw NotFound(
+        { code: 'deployments_not_found', uuids: body.uuids },
+        `No unretired/existing deployments found with uuids: '${body.uuids}'`
+      )
+    }
+
+    const jobId = await (
+      await getDeploymentDeleteQueue()
+    ).add(
+      deployments.map((deployment) => {
+        req.log.info(
+          {
+            code: 'delete_deployment_by_uuid',
+            deployment: deployment.uuid,
+          },
+          'Deleting deployment by a given UUID'
+        )
+        return {
+          deploymentId: deployment._id,
+          userId: user._id,
+        }
+      })
+    )
+
+    req.log.info(
+      { code: 'created_delete_deployment_job', jobId },
+      'Successfully created job in delete deployment queue'
+    )
+
+    return res.json({ deployments: deployments.map((deployment) => deployment.uuid) })
   },
 ]
 
@@ -75,27 +139,6 @@ export const postDeployment = [
       )
     }
 
-    const name = body.highLevelDetails.name
-      .toLowerCase()
-      .replace(/[^a-z 0-9]/g, '')
-      .replace(/ /g, '-')
-
-    const uuid = `${name}-${nanoid()}`
-    req.log.info({ uuid }, `Named deployment '${uuid}'`)
-
-    const deployment = await createDeployment(req.user!, {
-      schemaRef: body.schemaRef,
-      uuid: uuid,
-
-      model: model._id,
-      metadata: body,
-
-      owner: req.user!._id,
-    })
-
-    req.log.info({ code: 'saving_deployment', deployment }, 'Saving deployment model')
-    await deployment.save()
-
     req.log.info(
       { code: 'requesting_model_version', model, version: body.highLevelDetails.initialVersionRequested },
       'Requesting model version'
@@ -108,6 +151,31 @@ export const postDeployment = [
         `Unable to find version: '${body.highLevelDetails.initialVersionRequested}'`
       )
     }
+
+    if (isVersionRetired(version)) {
+      throw BadReq({ code: 'version_retired' }, 'Unable to create a deployment for a retired model version.')
+    }
+
+    const name = body.highLevelDetails.name
+      .toLowerCase()
+      .replace(/[^a-z 0-9]/g, '')
+      .replace(/ /g, '-')
+
+    const uuid = `${name}-${nanoid()}`
+    req.log.info({ uuid }, `Named deployment '${uuid}'`)
+
+    const deployment = await createDeployment(req.user!, {
+      schemaRef: body.schemaRef,
+      uuid,
+
+      model: model._id,
+      metadata: body,
+
+      owner: req.user!._id,
+    })
+
+    req.log.info({ code: 'saving_deployment', deployment }, 'Saving deployment model')
+    await deployment.save()
 
     const managerRequest = await createDeploymentRequests({
       version,
@@ -125,7 +193,7 @@ export const resetDeploymentApprovals = [
   ensureUserRole('user'),
   bodyParser.json(),
   async (req: Request, res: Response) => {
-    const user = req.user
+    const { user } = req
     const { uuid } = req.params
     const deployment = await findDeploymentByUuid(req.user!, uuid)
     if (!deployment) {
@@ -136,6 +204,10 @@ export const resetDeploymentApprovals = [
         { code: 'not_allowed_to_reset_approvals' },
         'You cannot reset the approvals for a deployment you do not own.'
       )
+    }
+
+    if (isDeploymentRetired(deployment)) {
+      throw BadReq({ code: 'deployment_retired' }, 'Unable to reset approvals on a deployment that is retired.')
     }
 
     const version = await findVersionByName(
@@ -149,6 +221,14 @@ export const resetDeploymentApprovals = [
         `Unabled to find version for requested deployment: '${uuid}'`
       )
     }
+
+    if (isVersionRetired(version)) {
+      throw BadReq(
+        { code: 'version_retired' },
+        'Unable to reset approvals on a deployment with a model version that is deleted/unbuilt.'
+      )
+    }
+
     deployment.managerApproved = ApprovalStates.NoResponse
     await deployment.save()
     req.log.info({ code: 'reset_deployment_approvals', deployment }, 'User resetting deployment approvals')

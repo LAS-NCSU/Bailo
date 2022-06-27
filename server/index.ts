@@ -1,6 +1,7 @@
 import express from 'express'
 import next from 'next'
 import http from 'http'
+import config from 'config'
 import processUploads from './processors/processUploads'
 import {
   getModelByUuid,
@@ -16,13 +17,13 @@ import { getUiConfig } from './routes/v1/uiConfig'
 import { connectToMongoose } from './utils/database'
 import { ensureBucketExists } from './utils/minio'
 import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
-import config from 'config'
-import { getVersion, putVersion, resetVersionApprovals } from './routes/v1/version'
+import { getVersion, putVersion, resetVersionApprovals, retireVersion } from './routes/v1/version'
 import {
   getDeployment,
   getCurrentUserDeployments,
   postDeployment,
   resetDeploymentApprovals,
+  deleteDeployments,
 } from './routes/v1/deployment'
 import { getDockerRegistryAuth } from './routes/v1/registryAuth'
 import processDeployments from './processors/processDeployments'
@@ -32,6 +33,7 @@ import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/re
 import logger, { expressErrorHandler, expressLogger } from './utils/logger'
 import { pullBuilderImage } from './utils/build'
 import { createIndexes } from './models/Model'
+import { processDeploymentDelete, processModelDelete } from './processors/processDeletes'
 
 const port = config.get('listen')
 const dev = process.env.NODE_ENV !== 'production'
@@ -58,6 +60,7 @@ server.get('/api/v1/model/:uuid/schema', ...getModelSchema)
 server.get('/api/v1/model/:uuid/versions', ...getModelVersions)
 server.get('/api/v1/model/:uuid/version/:version', ...getModelVersion)
 server.get('/api/v1/model/:uuid/deployments', ...getModelDeployments)
+server.post('/api/v1/deployment/retire', ...deleteDeployments)
 
 server.post('/api/v1/deployment', ...postDeployment)
 server.get('/api/v1/deployment/:uuid', ...getDeployment)
@@ -67,6 +70,7 @@ server.post('/api/v1/deployment/:uuid/reset-approvals', ...resetDeploymentApprov
 server.get('/api/v1/version/:id', ...getVersion)
 server.put('/api/v1/version/:id', ...putVersion)
 server.post('/api/v1/version/:id/reset-approvals', ...resetVersionApprovals)
+server.post('/api/v1/version/:id/retire', ...retireVersion)
 
 server.get('/api/v1/schemas', ...getSchemas)
 server.get('/api/v1/schema/default', ...getDefaultSchema)
@@ -101,7 +105,15 @@ export async function startServer() {
   // lazily create indexes for full text search
   createIndexes()
 
-  await Promise.all([app.prepare(), processUploads(), processDeployments()])
+  await Promise.all([
+    app.prepare(),
+    processUploads(),
+    processDeployments(),
+    processDeploymentDelete(),
+    processModelDelete(),
+  ])
+
+  pullBuilderImage()
 
   server.use((req, res) => {
     return handle(req, res)

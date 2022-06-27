@@ -76,29 +76,31 @@ export default function ExploreModels() {
           <Box sx={{ marginBottom: 2 }} />
 
           {models &&
-            models.map((model: Model, index: number) => (
-              <Box key={model.uuid}>
-                <Link href={`/model/${model.uuid}`} passHref>
-                  <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
-                    {model.currentMetadata.highLevelDetails.name}
-                  </MuiLink>
-                </Link>
+            models
+              .filter((v) => !v?.deleted)
+              .map((model: Model, index: number) => (
+                <Box key={model.uuid}>
+                  <Link href={`/model/${model.uuid}`} passHref>
+                    <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
+                      {model.currentMetadata.highLevelDetails.name}
+                    </MuiLink>
+                  </Link>
 
-                <Typography variant='body1' sx={{ marginBottom: 2 }}>
-                  {model.currentMetadata.highLevelDetails.modelInASentence}
-                </Typography>
+                  <Typography variant='body1' sx={{ marginBottom: 2 }}>
+                    {model.currentMetadata.highLevelDetails.modelInASentence}
+                  </Typography>
 
-                <Stack direction='row' spacing={1} sx={{ marginBottom: 2 }}>
-                  {model.currentMetadata.highLevelDetails.tags.map((tag: string) => (
-                    <Chip color='primary' key={`chip-${tag}`} label={tag} size='small' variant='outlined' />
-                  ))}
-                </Stack>
+                  <Stack direction='row' spacing={1} sx={{ marginBottom: 2 }}>
+                    {model.currentMetadata.highLevelDetails.tags.map((tag: string) => (
+                      <Chip color='primary' key={`chip-${tag}`} label={tag} size='small' variant='outlined' />
+                    ))}
+                  </Stack>
 
-                {index !== models.length - 1 && (
-                  <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }} />
-                )}
-              </Box>
-            ))}
+                  {index !== models.length - 1 && (
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }} />
+                  )}
+                </Box>
+              ))}
 
           {models?.length === 0 && <EmptyBlob text='No models here' />}
         </Paper>

@@ -114,7 +114,7 @@ export const getModelVersions = [
       throw NotFound({ code: 'model_not_found', uuid }, `Unable to find model '${uuid}'`)
     }
 
-    const versions = await findModelVersions(req.user!, model._id, { thin: true })
+    const versions = await findModelVersions(req.user!, model._id, { deleted: false })
 
     req.log.info({ code: 'fetch_versions_for_model', model }, 'User fetching versions for specified model')
     return res.json(versions)
@@ -132,15 +132,21 @@ export const getModelVersion = [
       throw NotFound({ code: 'model_not_found', uuid }, `Unable to find model '${uuid}'`)
     }
 
-    let version
     if (versionName === 'latest') {
-      version = await findVersionById(req.user!, model.versions[model.versions.length - 1])
-    } else {
-      version = await findVersionByName(req.user!, model._id, versionName)
+      const versions = await findModelVersions(req.user!, model._id, { deleted: false, limit: 1 })
+      if (versions.length === 0) {
+        req.log.info({ code: 'version_not_found', versionName }, `Unable to find version '${versionName}'`)
+        return res.json({})
+      }
+
+      return res.json(versions[0])
     }
 
+    const version = await findVersionByName(req.user!, model._id, versionName)
+
     if (!version) {
-      throw NotFound({ code: 'version_not_found', versionName }, `Unable to find version '${versionName}'`)
+      req.log.info({ code: 'version_not_found', versionName }, `Unable to find version '${versionName}'`)
+      return res.json({})
     }
 
     req.log.info({ code: 'fetch_version_for_model', model, version }, 'User finding specific version for model')

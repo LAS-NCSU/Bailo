@@ -13,6 +13,8 @@ import { connectToMongoose } from './database'
 
 let uploadQueue: PMongoQueue | undefined = undefined
 let deploymentQueue: PMongoQueue | undefined = undefined
+let modelDeleteQueue: PMongoQueue | undefined = undefined
+let deploymentDeleteQueue: PMongoQueue | undefined = undefined
 let mongoClient: mongoose.Connection | undefined = undefined
 
 export async function closeMongoInstance() {
@@ -28,6 +30,56 @@ export async function getMongoInstance() {
   return mongoClient
 }
 
+export async function getModelDeleteQueue() {
+  if (!modelDeleteQueue) {
+    const client = await getMongoInstance()
+    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-model-dead')
+    modelDeleteQueue = new PMongoQueue(client.db, 'queue-deletes-model', {
+      deadQueue: deleteDeadQueue,
+      maxRetries: 2,
+      visibility: 60 * 9,
+    })
+
+    modelDeleteQueue.on('succeeded', async (message: QueueMessage) => {
+      await sendDeploymentEmail(message, 'succeeded')
+    })
+
+    modelDeleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
+      await sendDeploymentEmail(message, 'retrying', e)
+    })
+
+    modelDeleteQueue.on('failed', async (message: QueueMessage, e: any) => {
+      await sendDeploymentEmail(message, 'failed', e)
+    })
+  }
+
+  return modelDeleteQueue
+}
+export async function getDeploymentDeleteQueue() {
+  if (!deploymentDeleteQueue) {
+    const client = await getMongoInstance()
+    const deleteDeadQueue = new PMongoQueue(client.db, 'queue-deletes-deployment-dead')
+    deploymentDeleteQueue = new PMongoQueue(client.db, 'queue-deletes-deployment', {
+      deadQueue: deleteDeadQueue,
+      maxRetries: 2,
+      visibility: 60 * 9,
+    })
+
+    deploymentDeleteQueue.on('succeeded', async (message: QueueMessage) => {
+      await sendDeploymentEmail(message, 'succeeded')
+    })
+
+    deploymentDeleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
+      await sendDeploymentEmail(message, 'retrying', e)
+    })
+
+    deploymentDeleteQueue.on('failed', async (message: QueueMessage, e: any) => {
+      await sendDeploymentEmail(message, 'failed', e)
+    })
+  }
+
+  return deploymentDeleteQueue
+}
 export async function getUploadQueue() {
   if (!uploadQueue) {
     const client = await getMongoInstance()
@@ -116,6 +168,7 @@ async function setUploadState(msg: QueueMessage, state: string, _e?: any) {
     }),
   })
 }
+
 
 async function sendDeploymentEmail(msg: QueueMessage, state: string, _e?: any) {
   const user = await getUserByInternalId(msg.payload.userId)
