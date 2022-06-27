@@ -154,16 +154,6 @@ export async function buildPython(version: VersionDoc, builderFiles: BuilderFile
   version.log('info', 'Successfully logged into docker')
 
   await logCommand(`img push ${tag}`, version.log.bind(version))
-  const tarPath = join(tmpDir, `${(version.model as ModelDoc).uuid}-${version.version}`)
-  await tar.c(
-    {
-      gzip: true,
-      file: tarPath,
-    },
-    [tmpDir]
-  )
-
-  uploadToS3(tarPath)
 
   vlog.info('Packaging build artifacts for archival')
   try {
