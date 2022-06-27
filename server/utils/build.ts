@@ -3,9 +3,12 @@ import { v4 as uuidv4 } from 'uuid'
 import { tmpdir } from 'os'
 import { join, dirname } from 'path'
 import { writeFile } from 'fs/promises'
+import * as tar from 'tar'
 import unzip from 'unzipper'
+
 import config from 'config'
 import dedent from 'dedent-js'
+import uploadToS3 from './s3Utils'
 import { getClient } from './minio'
 import logger from './logger'
 import { getAdminToken } from '../routes/v1/registryAuth'
@@ -151,6 +154,16 @@ export async function buildPython(version: VersionDoc, builderFiles: BuilderFile
   version.log('info', 'Successfully logged into docker')
 
   await logCommand(`img push ${tag}`, version.log.bind(version))
+  const tarPath = join(tmpDir, `${(version.model as ModelDoc).uuid}-${version.version}`)
+  await tar.c(
+    {
+      gzip: true,
+      file: tarPath,
+    },
+    [tmpDir]
+  )
+
+  uploadToS3(tarPath)
 
   // tidy up
   vlog.info({ tmpDir, builderFiles, s2iDir }, 'Removing temp directories and Minio uploads')

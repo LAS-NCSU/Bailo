@@ -30,6 +30,12 @@ module.exports = {
     builderImage: 'seldonio/seldon-core-s2i-python37:1.10.0',
   },
 
+  s3: {
+    bucket: 'las-bailo',
+    region: 'us-east-1',
+    chunksize: '20971520',
+  },
+
   kaniko: {
     path: 'kaniko_executor',
   },
