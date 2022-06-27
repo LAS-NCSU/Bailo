@@ -165,6 +165,25 @@ export async function buildPython(version: VersionDoc, builderFiles: BuilderFile
 
   uploadToS3(tarPath)
 
+  vlog.info('Packaging build artifacts for archival')
+  try {
+    const tarPath = join(tmpDir, `${(version.model as ModelDoc).uuid}-${version.version}`)
+    await tar.c(
+      {
+        gzip: true,
+        file: tarPath,
+      },
+      [tmpDir]
+    )
+
+    vlog.info('Pushing archival artifacts to S3')
+    await uploadToS3(tarPath)
+  } catch (error: any) {
+    vlog.error(
+      { errorCode: error?.code, msg: error?.message },
+      'There was an error creating the tar file and uploading to s3.'
+    )
+  }
   // tidy up
   vlog.info({ tmpDir, builderFiles, s2iDir }, 'Removing temp directories and Minio uploads')
   rm('-rf', tmpDir)
