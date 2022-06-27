@@ -23,13 +23,8 @@ export function isVersionRetired(version: Version): boolean {
     state: {
       build: { state },
     },
-    built,
   } = version
   if (state === 'deleted') {
-    return true
-  }
-
-  if (!built) {
     return true
   }
 

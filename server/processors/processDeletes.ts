@@ -14,15 +14,8 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: !config.get('registry.insecure'),
 })
 
-async function deleteImage(
-  tagNamespace: string,
-  modelId: string,
-  modelVersion: string,
-  logFunct: (level: string, msg: string) => Promise<void>
-): Promise<Response> {
+async function deleteImage(tagNamespace: string, modelId: string, modelVersion: string): Promise<Response> {
   const registry = `https://${config.get('registry.host')}/v2`
-
-  logFunct('info', `Requesting a delete of image with tag. /${tagNamespace}/${modelId}/manifests/${modelVersion}`)
 
   logger.info(`Requesting a delete of image with tag. /${tagNamespace}/${modelId}/manifests/${modelVersion}`)
 
@@ -93,7 +86,11 @@ export async function processDeploymentDelete() {
 
       const { modelID, initialVersionRequested } = deployment.metadata.highLevelDetails
 
-      const imageDeleteRes = await deleteImage(user.id, modelID, initialVersionRequested, deployment.log)
+      deployment.log(
+        'info',
+        `Requesting a delete of image with tag. /${user.id}/${modelID}/manifests/${initialVersionRequested}`
+      )
+      const imageDeleteRes = await deleteImage(user.id, modelID, initialVersionRequested)
 
       const externalImage = `${config.get('registry.host')}/${user.id}/${modelID}:${initialVersionRequested}`
       if (imageDeleteRes.status === 401) {
@@ -149,9 +146,13 @@ export async function processModelDelete() {
 
       const { uuid: modelUuid } = version.model as Model
 
-      const imageDeleteRes = await deleteImage('internal', modelUuid, version.version, version.log)
+      version.log(
+        'info',
+        `Requesting a delete of image with tag. /'internal'/${modelUuid}/manifests/${version.version}`
+      )
+      const imageDeleteRes = await deleteImage('internal', modelUuid, version.version)
 
-      const externalImage = `${config.get('registry.host')}/${user.id}/${modelUuid}:${version.version}`
+      const externalImage = `${config.get('registry.host')}/internal/${modelUuid}:${version.version}`
       if (imageDeleteRes.status === 401) {
         version.log('info', `User is not Authorized to delete: ${externalImage}`)
         throw new Error(`User is not Authorized to delete: ${externalImage}`)

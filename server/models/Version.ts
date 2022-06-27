@@ -35,7 +35,7 @@ const VersionSchema = new Schema<Version>(
     managerApproved: { type: String, required: true, enum: approvalStates, default: 'No Response' },
     reviewerApproved: { type: String, required: true, enum: approvalStates, default: 'No Response' },
 
-    state: { type: Schema.Types.Mixed, default: {} },
+    state: { type: Schema.Types.Mixed, default: { build: { state: '', reason: '' } } },
     logs: [{ timestamp: Date, level: String, msg: String }],
   },
   {
