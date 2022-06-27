@@ -41,15 +41,15 @@ export async function getModelDeleteQueue() {
     })
 
     modelDeleteQueue.on('succeeded', async (message: QueueMessage) => {
-      await sendDeploymentEmail(message, 'succeeded')
+      await setModelState(message, 'succeeded')
     })
 
     modelDeleteQueue.on('retrying', async (message: QueueMessage, e: any) => {
-      await sendDeploymentEmail(message, 'retrying', e)
+      await setModelState(message, 'retrying', e)
     })
 
     modelDeleteQueue.on('failed', async (message: QueueMessage, e: any) => {
-      await sendDeploymentEmail(message, 'failed', e)
+      await setModelState(message, 'failed', e)
     })
   }
 
@@ -91,15 +91,15 @@ export async function getUploadQueue() {
     })
 
     uploadQueue.on('succeeded', async (message: QueueMessage) => {
-      await setUploadState(message, 'succeeded')
+      await setModelState(message, 'succeeded')
     })
 
     uploadQueue.on('retrying', async (message: QueueMessage, e: any) => {
-      await setUploadState(message, 'retrying', e)
+      await setModelState(message, 'retrying', e)
     })
 
     uploadQueue.on('failed', async (message: QueueMessage, e: any) => {
-      await setUploadState(message, 'failed', e)
+      await setModelState(message, 'failed', e)
     })
   }
 
@@ -132,7 +132,7 @@ export async function getDeploymentQueue() {
   return deploymentQueue
 }
 
-async function setUploadState(msg: QueueMessage, state: string, _e?: any) {
+async function setModelState(msg: QueueMessage, state: string, _e?: any) {
   const user = await getUserByInternalId(msg.payload.userId)
   if (!user) {
     throw new Error(`Unable to find user '${msg.payload.userId}'`)
