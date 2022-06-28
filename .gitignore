@@ -40,3 +40,9 @@ helm/bailo/local.yaml
 
 # Jest
 coverage
+
+# certbot
+certbot/
+
+# Docker compose prod file
+docker-compose-prod.yml
