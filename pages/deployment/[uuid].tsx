@@ -18,13 +18,14 @@ import Menu from '@mui/material/Menu'
 import MenuList from '@mui/material/MenuList'
 import ListItemText from '@mui/material/ListItemText'
 import ListItemIcon from '@mui/material/ListItemIcon'
-import DownArrow from '@mui/icons-material/KeyboardArrowDown'
-import UpArrow from '@mui/icons-material/KeyboardArrowUp'
+import DownArrow from '@mui/icons-material/KeyboardArrowDownTwoTone'
+import UpArrow from '@mui/icons-material/KeyboardArrowUpTwoTone'
 import Stack from '@mui/material/Stack'
-import RestartAlt from '@mui/icons-material/RestartAlt'
+import MuiLink from '@mui/material/Link'
+import RestartAlt from '@mui/icons-material/RestartAltTwoTone'
 import MenuItem from '@mui/material/MenuItem'
 import Divider from '@mui/material/Divider'
-import Typography from '@mui/material/Typography'
+import useTheme from '@mui/styles/useTheme'
 
 import Link from 'next/link'
 import { useGetDeployment } from '../../data/deployment'
@@ -38,6 +39,7 @@ import Wrapper from '../../src/Wrapper'
 import { createDeploymentComplianceFlow } from '../../utils/complianceFlow'
 import ApprovalsChip from '../../src/common/ApprovalsChip'
 import { postEndpoint } from '../../data/api'
+import { lightTheme } from '../../src/theme'
 
 const ComplianceFlow = dynamic(() => import('../../src/ComplianceFlow'))
 
@@ -68,15 +70,10 @@ function CodeLine({ line }) {
           }
         }}
       >
-        ${' '}
         <Tooltip title='Copy to clipboard' arrow>
-          <b
-            style={{
-              background: '#e0e0e0',
-            }}
-          >
-            {line}
-          </b>
+          <Box sx={{ backgroundColor: 'whitesmoke', color: '#383838', p: 1, borderRadius: 2 }}>
+            $ <b>{line}</b>
+          </Box>
         </Tooltip>
       </div>
       <CopiedSnackbar {...{ openSnackbar, setOpenSnackbar }} />
@@ -107,6 +104,8 @@ export default function Deployment() {
   const { currentUser, isCurrentUserLoading, isCurrentUserError } = useGetCurrentUser()
   const { deployment, isDeploymentLoading, isDeploymentError } = useGetDeployment(uuid)
   const { uiConfig, isUiConfigLoading, isUiConfigError } = useGetUiConfig()
+
+  const theme: any = useTheme() || lightTheme
 
   useEffect(() => {
     if (deployment?.metadata?.highLevelDetails !== undefined) {
@@ -213,7 +212,13 @@ export default function Deployment() {
             </MenuList>
           </Menu>
           <Box sx={{ borderBottom: 1, marginTop: 1, borderColor: 'divider' }}>
-            <Tabs indicatorColor='secondary' value={tab} onChange={handleTabChange} aria-label='basic tabs example'>
+            <Tabs
+              textColor={theme.palette.mode === 'light' ? 'primary' : 'secondary'}
+              indicatorColor='secondary'
+              value={tab}
+              onChange={handleTabChange}
+              aria-label='basic tabs example'
+            >
               <Tab label='Overview' value='overview' />
               <Tab label='Compliance' value='compliance' />
               <Tab label='Build Logs' value='build' />
@@ -265,30 +270,36 @@ export default function Deployment() {
         </Paper>
       </Wrapper>
       <Dialog maxWidth='lg' onClose={handleClose} open={open}>
-        <DialogTitle>Pull from Docker</DialogTitle>
+        <DialogTitle sx={{ backgroundColor: theme.palette.mode === 'light' ? '#f3f1f1' : '#5a5a5a' }}>
+          Pull from Docker
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText sx={{ backgroundColor: 'whitesmoke', p: 2 }}>
+          <DialogContentText sx={{ p: 2 }}>
             <Box>
-              <p>
-                # Login to Docker (your token can be found on the <Link href='/settings'>settings</Link> page)
+              <p style={{ margin: 0 }}>
+                # Login to Docker (your token can be found on the
+                <Link href='/settings'>
+                  <MuiLink sx={{ ml: 0.5, mr: 0.5, color: theme.palette.secondary.main }}>settings</MuiLink>
+                </Link>
+                page) {theme.palette.mode}
               </p>
               <CodeLine line={`docker login ${uiConfig.registry.host} -u ${currentUser.id}`} />
               <br />
 
-              <p># Pull model</p>
+              <p style={{ margin: 0 }}># Pull model</p>
               <CodeLine line={`docker pull ${deploymentTag}`} />
               <br />
 
-              <p># Run Docker image</p>
+              <p style={{ margin: 0 }}># Run Docker image</p>
               <CodeLine line={`docker run -p 9999:9000 ${deploymentTag}`} />
-              <p># (the container exposes on port 9000, available on the host as port 9999)</p>
+              <p style={{ margin: 0 }}># (the container exposes on port 9000, available on the host as port 9999)</p>
               <br />
 
-              <p># Check that the Docker container is running</p>
+              <p style={{ margin: 0 }}># Check that the Docker container is running</p>
               <CodeLine line='docker ps' />
               <br />
 
-              <p># The model is accessible at localhost:9999</p>
+              <p style={{ margin: 0 }}># The model is accessible at localhost:9999</p>
             </Box>
           </DialogContentText>
         </DialogContent>

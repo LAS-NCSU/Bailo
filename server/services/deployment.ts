@@ -8,6 +8,7 @@ import { asyncFilter } from '../utils/general'
 import { createSerializer, SerializerOptions } from '../utils/logger'
 import { serializedModelFields } from './model'
 import { UserDoc } from '../models/User'
+import { VersionDoc } from '../models/Version'
 
 const authorisation = new AuthorisationBase()
 
@@ -88,6 +89,7 @@ interface CreateDeployment {
   schemaRef: string
   uuid: string
 
+  versions: Array<VersionDoc>
   model: ModelId
   metadata: any
 
@@ -97,11 +99,21 @@ interface CreateDeployment {
 export async function createDeployment(user: UserDoc, data: CreateDeployment) {
   const deployment = new DeploymentModel(data)
 
-  if (!authorisation.canUserSeeDeployment(user, deployment)) {
+  if (!(await authorisation.canUserSeeDeployment(user, deployment))) {
     throw Forbidden({ data }, 'Unable to create deployment, failed permissions check.')
   }
 
   await deployment.save()
 
   return deployment
+}
+
+export async function updateDeploymentVersions(user: UserDoc, modelId: ModelId, version: VersionDoc) {
+  const deployments = await findDeployments(user, { model: modelId })
+  if (deployments.length !== 0) {
+    deployments.forEach((deployment: DeploymentDoc) => {
+      deployment.versions.push(version)
+      deployment.save()
+    })
+  }
 }

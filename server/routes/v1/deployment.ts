@@ -164,10 +164,15 @@ export const postDeployment = [
     const uuid = `${name}-${nanoid()}`
     req.log.info({ uuid }, `Named deployment '${uuid}'`)
 
+    const version = await findVersionByName(req.user!, model._id, body.highLevelDetails.initialVersionRequested)
+
+    const versionArray: any = [version!._id]
+
     const deployment = await createDeployment(req.user!, {
       schemaRef: body.schemaRef,
       uuid,
 
+      versions: versionArray,
       model: model._id,
       metadata: body,
 

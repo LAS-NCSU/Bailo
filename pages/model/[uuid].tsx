@@ -21,17 +21,19 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import copy from 'copy-to-clipboard'
-import UploadIcon from '@mui/icons-material/Upload'
-import EditIcon from '@mui/icons-material/Edit'
-import PostAddIcon from '@mui/icons-material/PostAdd'
-import Favorite from '@mui/icons-material/Favorite'
-import DownArrow from '@mui/icons-material/KeyboardArrowDown'
-import UpArrow from '@mui/icons-material/KeyboardArrowUp'
-import RestartAlt from '@mui/icons-material/RestartAlt'
+import UploadIcon from '@mui/icons-material/UploadTwoTone'
+import EditIcon from '@mui/icons-material/EditTwoTone'
+import PostAddIcon from '@mui/icons-material/PostAddTwoTone'
+import Favorite from '@mui/icons-material/FavoriteTwoTone'
+import DownArrow from '@mui/icons-material/KeyboardArrowDownTwoTone'
+import UpArrow from '@mui/icons-material/KeyboardArrowUpTwoTone'
+import RestartAlt from '@mui/icons-material/RestartAltTwoTone'
+import useTheme from '@mui/styles/useTheme'
 
 import TerminalLog from 'src/TerminalLog'
 import Wrapper from 'src/Wrapper'
 import ModelOverview from 'src/ModelOverview'
+import UserAvatar from 'src/common/UserAvatar'
 import createComplianceFlow from 'utils/complianceFlow'
 import { Elements } from 'react-flow-renderer'
 import { useGetModelVersions, useGetModelVersion, useGetModelDeployments } from 'data/model'
@@ -39,6 +41,7 @@ import { useGetCurrentUser } from 'data/user'
 import MuiAlert, { AlertProps } from '@mui/material/Alert'
 import { setTargetValue } from 'data/utils'
 import Link from 'next/link'
+import Chip from '@mui/material/Chip'
 import Menu from '@mui/material/Menu'
 import MenuList from '@mui/material/MenuList'
 import ListItemText from '@mui/material/ListItemText'
@@ -51,6 +54,7 @@ import ApprovalsChip from '../../src/common/ApprovalsChip'
 import { Deployment, User, Version } from '../../types/interfaces'
 import MultipleErrorWrapper from '../../src/errors/MultipleErrorWrapper'
 import EmptyBlob from '../../src/common/EmptyBlob'
+import { lightTheme } from '../../src/theme'
 
 const ComplianceFlow = dynamic(() => import('../../src/ComplianceFlow'))
 
@@ -63,6 +67,8 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>((props, ref) => (
 function Model() {
   const router = useRouter()
   const { uuid }: { uuid?: string } = router.query
+
+  const deploymentVersionsDisplayLimit = 5
 
   const [group, setGroup] = useState<TabOptions>('overview')
   const [selectedVersion, setSelectedVersion] = useState<string | undefined>(undefined)
@@ -79,6 +85,7 @@ function Model() {
   const { deployments, isDeploymentsLoading, isDeploymentsError } = useGetModelDeployments(uuid)
 
   const onVersionChange = setTargetValue(setSelectedVersion)
+  const theme: any = useTheme() || lightTheme
 
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmRollbackOpen, setConfirmRollbackOpen] = useState(false)
@@ -317,7 +324,13 @@ function Model() {
             </Stack>
           </Grid>
 
-          <Tabs indicatorColor='secondary' value={group} onChange={handleGroupChange} aria-label='basic tabs example'>
+          <Tabs
+            indicatorColor='secondary'
+            textColor={theme.palette.mode === 'light' ? 'primary' : 'secondary'}
+            value={group}
+            onChange={handleGroupChange}
+            aria-label='basic tabs example'
+          >
             <Tab label='Overview' value='overview' />
             <Tab label='Compliance' value='compliance' />
             <Tab label='Build Logs' value='build' />
@@ -355,7 +368,7 @@ function Model() {
                 <Link href={`/deployment/${deployment.uuid}`} passHref>
                   <Box>
                     {!deployment.deleted && (
-                      <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none' }}>
+                      <MuiLink variant='h5' sx={{ fontWeight: '500', textDecoration: 'none', color: theme.palette.secondary.main }}>
                         {deployment.metadata.highLevelDetails.name}
                       </MuiLink>
                     )}
@@ -381,11 +394,55 @@ function Model() {
                     )}
                   </Box>
                 </Link>
-                <Typography variant='body1' sx={{ marginBottom: 2 }}>
-                  Contacts: {deployment.metadata.contacts.requester}, {deployment.metadata.contacts.secondPOC}
-                </Typography>
 
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }} />
+                <Box sx={{ mb: 1 }}>
+                  <Stack direction='row'>
+                    <Typography variant='subtitle2' sx={{ mt: 'auto', mb: 'auto', mr: 1 }}>
+                      Contacts:
+                    </Typography>
+                    <Chip
+                      color={theme.palette.mode === 'light' ? 'primary' : 'secondary'}
+                      sx={{ backgroundColor: theme.palette.mode === 'light' ? 'primary' : 'secondary' }}
+                      avatar={<UserAvatar username={deployment.metadata.contacts.requester} size='chip' />}
+                      label={deployment.metadata.contacts.requester}
+                    />
+                    <Chip
+                      color={theme.palette.mode === 'light' ? 'primary' : 'secondary'}
+                      sx={{ backgroundColor: theme.palette.mode === 'light' ? 'primary' : 'secondary' }}
+                      avatar={<UserAvatar username={deployment.metadata.contacts.secondPOC} size='chip' />}
+                      label={deployment.metadata.contacts.secondPOC}
+                    />
+                  </Stack>
+                </Box>
+
+                <Box sx={{ mb: 1 }}>
+                  <Stack direction='row'>
+                    <Typography variant='subtitle2' sx={{ mt: 'auto', mb: 'auto', mr: 1 }}>
+                      Associated versions:
+                    </Typography>
+                    {deployment.versions.length > 0 &&
+                      versions
+                        .filter((deploymentVersion) => deployment.versions.includes(deploymentVersion._id))
+                        .slice(0, deploymentVersionsDisplayLimit)
+                        .map((filteredVersion) => (
+                          <Chip
+                            color={theme.palette.mode === 'light' ? 'primary' : 'secondary'}
+                            sx={{ backgroundColor: theme.palette.mode === 'light' ? 'primary' : 'secondary' }}
+                            key={filteredVersion.version}
+                            label={filteredVersion.version}
+                          />
+                        ))}
+                    {deployment.versions.length > 3 && (
+                      <Typography sx={{ mt: 'auto', mb: 'auto' }}>{`...plus ${
+                        versions.filter((deploymentVersionForLimit) =>
+                          deployment.versions.includes(deploymentVersionForLimit._id)
+                        ).length - deploymentVersionsDisplayLimit
+                      } more`}</Typography>
+                    )}
+                  </Stack>
+                </Box>
+
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 1 }} />
               </Box>
             ))}
           </>
