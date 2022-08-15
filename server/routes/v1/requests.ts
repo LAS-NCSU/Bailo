@@ -141,7 +141,7 @@ export const postRequestResponse = [
           await getDeploymentQueue()
         ).add({
           deploymentId: deployment._id,
-          userId,
+          userId: deployment.owner,
         })
       }
     } else {

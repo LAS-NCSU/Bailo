@@ -3,10 +3,10 @@ import { v4 as uuidv4 } from 'uuid'
 import { tmpdir } from 'os'
 import { join, dirname } from 'path'
 import { writeFile } from 'fs/promises'
-import { getClient } from './minio'
 import unzip from 'unzipper'
 import config from 'config'
 import dedent from 'dedent-js'
+import { getClient } from './minio'
 import logger from './logger'
 import { getAdminToken } from '../routes/v1/registryAuth'
 import { VersionDoc } from '../models/Version'
@@ -80,7 +80,7 @@ export async function runCommand(command: string, onStdout: Function, onStderr: 
         )
       }
 
-      resolve({})
+      return resolve({})
     })
   })
 }

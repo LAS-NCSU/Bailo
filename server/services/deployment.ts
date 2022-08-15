@@ -2,7 +2,7 @@ import { castArray } from 'lodash'
 
 import { Forbidden } from '../utils/result'
 import DeploymentModel, { DeploymentDoc } from '../models/Deployment'
-import { ModelId } from '../../types/interfaces'
+import { Deployment, ModelId, DeploymentId } from '../../types/interfaces'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
 import { createSerializer, SerializerOptions } from '../utils/logger'
@@ -14,6 +14,10 @@ const authorisation = new AuthorisationBase()
 
 interface GetDeploymentOptions {
   populate?: boolean
+}
+
+export function isDeploymentRetired(deployment: Deployment): boolean {
+  return deployment.deleted
 }
 
 export function serializedDeploymentFields(): SerializerOptions {
@@ -48,13 +52,23 @@ export async function findDeploymentById(user: UserDoc, id: ModelId, opts?: GetD
   return filterDeployment(user, await deployment)
 }
 
+export async function findDeploymentsByUuid(user: UserDoc, uuids: [DeploymentId], opts?: GetDeploymentOptions) {
+  let deployments = DeploymentModel.find({ uuid: uuids })
+  if (opts?.populate) deployments = deployments.populate('model')
+
+  return filterDeployment(user, await deployments)
+}
+
 export interface DeploymentFilter {
   owner?: ModelId
   model?: ModelId
+  deleted?: boolean
 }
 
-export async function findDeployments(user: UserDoc, { owner, model }: DeploymentFilter) {
+export async function findDeployments(user: UserDoc, { owner, model, deleted = false }: DeploymentFilter) {
   const query: any = {}
+
+  query.deleted = deleted
 
   if (owner) query.owner = owner
   if (model) query.model = model
@@ -65,6 +79,10 @@ export async function findDeployments(user: UserDoc, { owner, model }: Deploymen
 
 export async function markDeploymentBuilt(_id: ModelId) {
   return DeploymentModel.findByIdAndUpdate(_id, { built: true })
+}
+
+export async function markDeploymentDeleted(_id: ModelId) {
+  return DeploymentModel.findByIdAndUpdate(_id, { deleted: true })
 }
 
 interface CreateDeployment {

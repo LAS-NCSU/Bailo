@@ -167,6 +167,7 @@ export const postUpload = [
           parent: parentId,
           versions: [version._id],
           currentMetadata: metadata,
+          deleted: false,
 
           owner: req.user!._id,
         })

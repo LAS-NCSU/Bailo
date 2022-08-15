@@ -59,6 +59,7 @@ export interface Model {
 
   parent: Types.ObjectId
   versions: Array<Types.ObjectId>
+  deleted: boolean
 
   currentMetadata: ModelMetadata
 
@@ -141,3 +142,7 @@ export interface SplitSchema {
 }
 
 export type ModelId = string | Types.ObjectId
+
+export type DeploymentId = string | Types.ObjectId
+
+export type VersionId = string | Types.ObjectId
