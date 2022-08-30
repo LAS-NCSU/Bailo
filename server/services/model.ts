@@ -17,8 +17,8 @@ export function serializedModelFields(): SerializerOptions {
   }
 }
 
-export async function markModelDeleted(_id: ModelId) {
-  return ModelModel.findByIdAndUpdate(_id, { deleted: true })
+export async function markModelRetired(_id: ModelId) {
+  return ModelModel.findByIdAndUpdate(_id, { retired: true })
 }
 
 export async function filterModel<T>(user: UserDoc, unfiltered: T): Promise<T> {

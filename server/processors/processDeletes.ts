@@ -2,13 +2,13 @@ import config from 'config'
 import prettyMs from 'pretty-ms'
 import https from 'https'
 import { Model } from 'server/models/Model'
-import { markModelDeleted } from '../services/model'
+import { markModelRetired } from '../services/model'
 import { findModelVersions, findVersionById, markVersionState } from '../services/version'
 import { getDeploymentDeleteQueue, getModelDeleteQueue } from '../utils/queues'
 import logger from '../utils/logger'
 import { getAccessToken } from '../routes/v1/registryAuth'
 import { getUserByInternalId } from '../services/user'
-import { findDeploymentById, markDeploymentDeleted } from '../services/deployment'
+import { findDeploymentById, markDeploymentRetired } from '../services/deployment'
 
 const httpsAgent = new https.Agent({
   rejectUnauthorized: !config.get('registry.insecure'),
@@ -77,9 +77,9 @@ export async function processDeploymentDelete() {
         throw new Error('Unable to find deployment')
       }
 
-      if (deployment.deleted) {
-        logger.error(`Deployment with id: ${deploymentId} already deleted.`)
-        throw new Error(`Deployment with id: ${deploymentId} already deleted.`)
+      if (deployment.retired) {
+        logger.error(`Deployment with id: ${deploymentId} already retired.`)
+        throw new Error(`Deployment with id: ${deploymentId} already retired.`)
       }
 
       const dlog = logger.child({ deploymentId: deployment._id })
@@ -104,11 +104,11 @@ export async function processDeploymentDelete() {
       }
 
       if (imageDeleteRes.status === 202) {
-        deployment.log('info', 'Deleted deployment')
-        dlog.info('Marking deployment as deleted')
-        await markDeploymentDeleted(deployment._id)
+        deployment.log('info', 'Retired deployment')
+        dlog.info('Marking deployment as retired')
+        await markDeploymentRetired(deployment._id)
         const time = prettyMs(new Date().getTime() - startTime.getTime())
-        await deployment.log('info', `Deleted deployment with tag '${externalImage}' in ${time}`)
+        await deployment.log('info', `Retired deployment with tag '${externalImage}' in ${time}`)
       }
     } catch (e) {
       logger.error({ error: e, deploymentId: msg.payload.deploymentId }, 'Error occurred whilst deleting deployment')
@@ -139,9 +139,9 @@ export async function processModelDelete() {
 
       const vlog = logger.child({ versionId: version._id })
 
-      if (version.state?.deleted === true) {
-        logger.error(`Model version with id: ${versionId} already deleted.`)
-        throw new Error(`Model version id: ${versionId} already deleted.`)
+      if (version.state?.retired === true) {
+        logger.error(`Model version with id: ${versionId} already retired.`)
+        throw new Error(`Model version id: ${versionId} already retired.`)
       }
 
       const { uuid: modelUuid } = version.model as Model
@@ -164,9 +164,9 @@ export async function processModelDelete() {
       }
 
       if (imageDeleteRes.status === 202) {
-        version.log('info', 'Deleted model version')
-        vlog.info('Marking model version as deleted')
-        await markVersionState(user, version._id, 'deleted')
+        version.log('info', 'Retired model version')
+        vlog.info('Marking model version as retired')
+        await markVersionState(user, version._id, 'retired')
         // TODO
         // If I delete/retire a model version:
         // - Find all deployments of that model who's versions are less than or equal to that version
@@ -181,9 +181,9 @@ export async function processModelDelete() {
 
         // Check to see if a model has any non-delted versions
         // If there are no non-deleted version mark the model as deleted.
-        const nonDeletedVersions = await findModelVersions(user, version.model, { deleted: false })
+        const nonDeletedVersions = await findModelVersions(user, version.model, { retired: false })
         if (!nonDeletedVersions || nonDeletedVersions.length === 0) {
-          await markModelDeleted(version.model)
+          await markModelRetired(version.model)
         }
 
         const time = prettyMs(new Date().getTime() - startTime.getTime())

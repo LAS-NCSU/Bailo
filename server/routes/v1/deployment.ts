@@ -5,7 +5,6 @@ import { Deployment } from '@/types/interfaces'
 import { getUserById } from '../../services/user'
 import { getDeploymentDeleteQueue } from '../../utils/queues'
 import { validateSchema } from '../../utils/validateSchema'
-import { customAlphabet } from 'nanoid'
 import { ensureUserRole } from '../../utils/user'
 import { createDeploymentRequests } from '../../services/request'
 import { BadReq, NotFound, Forbidden } from '../../utils/result'
@@ -39,7 +38,7 @@ export const getDeployment = [
   },
 ]
 
-export const deleteDeployments = [
+export const retireDeployments = [
   ensureUserRole('user'),
   bodyParser.json(),
   async (req: Request, res: Response) => {
@@ -165,8 +164,6 @@ export const postDeployment = [
     const uuid = `${name}-${nanoid()}`
     req.log.info({ uuid }, `Named deployment '${uuid}'`)
 
-    const version = await findVersionByName(req.user!, model._id, body.highLevelDetails.initialVersionRequested)
-
     const versionArray: any = [version!._id]
 
     const deployment = await createDeployment(req.user!, {
@@ -231,7 +228,7 @@ export const resetDeploymentApprovals = [
     if (isVersionRetired(version)) {
       throw BadReq(
         { code: 'version_retired' },
-        'Unable to reset approvals on a deployment with a model version that is deleted/unbuilt.'
+        'Unable to reset approvals on a deployment with a model version that is retired/unbuilt.'
       )
     }
 

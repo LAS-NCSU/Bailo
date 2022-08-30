@@ -3,20 +3,20 @@ import config from 'config'
 import { v4 as uuidv4 } from 'uuid'
 import { customAlphabet } from 'nanoid'
 
+import { Request, Response } from 'express'
+import mongoose from 'mongoose'
+import _ from 'lodash'
 import { validateSchema } from '../../utils/validateSchema'
 import { normalizeMulterFile } from '../../utils/multer'
 import MinioStore from '../../utils/MinioStore'
 import { getUploadQueue } from '../../utils/queues'
 import { ensureUserRole } from '../../utils/user'
-import { Request, Response } from 'express'
-import mongoose from 'mongoose'
 
 import { createVersionRequests } from '../../services/request'
 import { BadReq, Conflict } from '../../utils/result'
 import { findModelByUuid, createModel } from '../../services/model'
 import { createVersion } from '../../services/version'
 import { findSchemaByRef } from '../../services/schema'
-import _ from 'lodash'
 import { updateDeploymentVersions } from '../../services/deployment'
 
 export interface MinioFile {
@@ -106,7 +106,7 @@ export const postUpload = [
       try {
         version = await createVersion(req.user!, {
           version: metadata.highLevelDetails.modelCardVersion,
-          metadata: metadata,
+          metadata,
         })
       } catch (err: any) {
         if (err.code === 11000) {
@@ -144,13 +144,12 @@ export const postUpload = [
         parentId = parentModel._id
       }
 
-      /** Saving the model **/
+      /** Saving the model * */
 
-      let model: any = undefined
+      let model: any
 
       if (mode === 'newVersion') {
         // Update an existing model's version array
-        const modelUuid = req.query.modelUuid
 
         model = await findModelByUuid(req.user!, modelUuid as string)
         model.versions.push(version._id)
@@ -167,7 +166,7 @@ export const postUpload = [
           parent: parentId,
           versions: [version._id],
           currentMetadata: metadata,
-          deleted: false,
+          retired: false,
 
           owner: req.user!._id,
         })
@@ -199,7 +198,7 @@ export const postUpload = [
       req.log.info({ code: 'created_upload_job', jobId }, 'Successfully created job in upload queue')
 
       // then return reference to user
-      res.json({
+      return res.json({
         uuid: model.uuid,
       })
     })

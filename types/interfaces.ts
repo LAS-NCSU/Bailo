@@ -59,7 +59,7 @@ export interface Model {
 
   parent: Types.ObjectId
   versions: Array<Types.ObjectId>
-  deleted: boolean
+  retired: boolean
 
   currentMetadata: ModelMetadata
 

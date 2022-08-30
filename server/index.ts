@@ -23,7 +23,7 @@ import {
   getCurrentUserDeployments,
   postDeployment,
   resetDeploymentApprovals,
-  deleteDeployments,
+  retireDeployments,
 } from './routes/v1/deployment'
 import { getDockerRegistryAuth } from './routes/v1/registryAuth'
 import processDeployments from './processors/processDeployments'
@@ -61,7 +61,7 @@ server.get('/api/v1/model/:uuid/schema', ...getModelSchema)
 server.get('/api/v1/model/:uuid/versions', ...getModelVersions)
 server.get('/api/v1/model/:uuid/version/:version', ...getModelVersion)
 server.get('/api/v1/model/:uuid/deployments', ...getModelDeployments)
-server.post('/api/v1/deployment/retire', ...deleteDeployments)
+server.post('/api/v1/deployment/retire', ...retireDeployments)
 
 server.post('/api/v1/deployment', ...postDeployment)
 server.get('/api/v1/deployment/:uuid', ...getDeployment)

@@ -69,7 +69,7 @@ export const resetVersionApprovals = [
     }
 
     if (isVersionRetired(version)) {
-      throw BadReq({ code: 'version_retired' }, 'Unable to reset approvals on a model version that is deleted/unbuilt.')
+      throw BadReq({ code: 'version_retired' }, 'Unable to reset approvals on a model version that is retired/unbuilt.')
     }
 
     if (version.managerApproved !== ApprovalStates.Accepted || version.reviewerApproved !== ApprovalStates.Accepted) {
@@ -104,7 +104,7 @@ export const retireVersion = [
     }
 
     if (isVersionRetired(version)) {
-      throw BadReq({ code: 'version_retired' }, 'Unable to retire a model version that is deleted/unbuilt.')
+      throw BadReq({ code: 'version_retired' }, 'Unable to retire a model version that is retired/unbuilt.')
     }
 
     req.log.info(

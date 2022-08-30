@@ -17,7 +17,7 @@ interface GetDeploymentOptions {
 }
 
 export function isDeploymentRetired(deployment: Deployment): boolean {
-  return deployment.deleted
+  return deployment.retired
 }
 
 export function serializedDeploymentFields(): SerializerOptions {
@@ -62,13 +62,13 @@ export async function findDeploymentsByUuid(user: UserDoc, uuids: [DeploymentId]
 export interface DeploymentFilter {
   owner?: ModelId
   model?: ModelId
-  deleted?: boolean
+  retired?: boolean
 }
 
-export async function findDeployments(user: UserDoc, { owner, model, deleted = false }: DeploymentFilter) {
+export async function findDeployments(user: UserDoc, { owner, model, retired = false }: DeploymentFilter) {
   const query: any = {}
 
-  query.deleted = deleted
+  query.retired = retired
 
   if (owner) query.owner = owner
   if (model) query.model = model
@@ -81,8 +81,8 @@ export async function markDeploymentBuilt(_id: ModelId) {
   return DeploymentModel.findByIdAndUpdate(_id, { built: true })
 }
 
-export async function markDeploymentDeleted(_id: ModelId) {
-  return DeploymentModel.findByIdAndUpdate(_id, { deleted: true })
+export async function markDeploymentRetired(_id: ModelId) {
+  return DeploymentModel.findByIdAndUpdate(_id, { retired: true })
 }
 
 interface CreateDeployment {

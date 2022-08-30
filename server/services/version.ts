@@ -14,7 +14,7 @@ const authorisation = new AuthorisationBase()
 interface GetVersionOptions {
   thin?: boolean
   populate?: boolean
-  deleted?: boolean
+  retired?: boolean
   limit?: number
 }
 
@@ -24,7 +24,7 @@ export function isVersionRetired(version: Version): boolean {
       build: { state },
     },
   } = version
-  if (state === 'deleted') {
+  if (state === 'retured') {
     return true
   }
 
@@ -65,8 +65,8 @@ export async function findVersionByName(user: UserDoc, model: ModelId, name: str
 
 export async function findModelVersions(user: UserDoc, model: ModelId, opts?: GetVersionOptions) {
   const query = { model }
-  if (opts?.deleted === false) {
-    query['state.build.state'] = { $ne: 'deleted' }
+  if (opts?.retired === false) {
+    query['state.build.state'] = { $ne: 'retired' }
   }
   let versions = VersionModel.find(query).sort({ createdAt: -1 })
 

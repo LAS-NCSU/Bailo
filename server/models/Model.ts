@@ -9,7 +9,7 @@ export interface Model {
   parent: ModelDoc
   versions: Types.Array<VersionDoc | Types.ObjectId>
   currentMetadata: any
-  deleted: boolean
+  retired: boolean
 
   owner: UserDoc | Types.ObjectId
 
@@ -28,7 +28,7 @@ const ModelSchema = new Schema<Model>(
     versions: [{ type: Schema.Types.ObjectId, ref: 'Version' }],
     currentMetadata: { type: Schema.Types.Mixed },
 
-    deleted: { type: Boolean, required: true, default: false },
+    retured: { type: Boolean, required: true, default: false },
     owner: { type: Schema.Types.ObjectId, ref: 'User', index: true },
   },
   {
