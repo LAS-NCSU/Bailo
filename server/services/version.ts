@@ -1,13 +1,12 @@
 import { castArray } from 'lodash'
-import VersionModel, { VersionDoc } from '../models/Version'
-
 import { Version, ModelId } from '../../types/interfaces'
+import { UserDoc } from '../models/User'
+import VersionModel, { VersionDoc } from '../models/Version'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
-import { BadReq, Forbidden } from '../utils/result'
 import { createSerializer, SerializerOptions } from '../utils/logger'
+import { BadReq, Forbidden } from '../utils/result'
 import { serializedModelFields } from './model'
-import { UserDoc } from '../models/User'
 
 const authorisation = new AuthorisationBase()
 
@@ -110,6 +109,7 @@ export async function markVersionState(user: UserDoc, _id: ModelId, state: strin
 interface CreateVersion {
   version: string
   metadata: any
+  files: any
 }
 
 export async function createVersion(user: UserDoc, data: CreateVersion) {

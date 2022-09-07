@@ -1,6 +1,6 @@
-import { ensureUserRole } from '../../utils/user'
 import config from 'config'
 import { Request, Response } from 'express'
+import { ensureUserRole } from '../../utils/user'
 
 function getMongoID() {
   const timestamp = ((new Date().getTime() / 1000) | 0).toString(16)
@@ -938,6 +938,38 @@ function generateSpecification() {
               schema: {
                 $ref: '#/definitions/Deployment',
               },
+            },
+          },
+        },
+      },
+      '/deployment/{uuid}/version/{version}/raw/{fileType}': {
+        get: {
+          tags: ['deployment'],
+          description: 'Download either the raw code or binary files for a model version',
+          parameters: [
+            {
+              name: 'uuid',
+              in: 'path',
+              description: 'UUID of the deployment.',
+              type: 'string',
+            },
+            {
+              name: 'version',
+              in: 'path',
+              description: 'The name of the specific version.',
+              type: 'string',
+            },
+            {
+              name: 'fileType',
+              in: 'path',
+              description: 'Raw file to export',
+              type: 'string',
+              enum: ['code', 'binary'],
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'An archived file containing either the code of binary files of the version specified.',
             },
           },
         },

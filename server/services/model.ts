@@ -1,13 +1,12 @@
-import { Types } from 'mongoose'
 import { castArray } from 'lodash'
-
-import { Forbidden } from '../utils/result'
-import ModelModel from '../models/Model'
+import { Types } from 'mongoose'
 import { Model, ModelId, User } from '../../types/interfaces'
+import ModelModel from '../models/Model'
+import { UserDoc } from '../models/User'
 import AuthorisationBase from '../utils/AuthorisationBase'
 import { asyncFilter } from '../utils/general'
 import { SerializerOptions } from '../utils/logger'
-import { UserDoc } from '../models/User'
+import { Forbidden } from '../utils/result'
 
 const authorisation = new AuthorisationBase()
 

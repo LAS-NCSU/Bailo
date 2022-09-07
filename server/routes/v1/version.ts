@@ -3,9 +3,9 @@ import bodyParser from 'body-parser'
 import { getModelDeleteQueue } from '../../utils/queues'
 import { ensureUserRole } from '../../utils/user'
 import { createVersionRequests } from '../../services/request'
-import { Forbidden, NotFound, BadReq } from '../../utils/result'
 import { findVersionById, isVersionRetired } from '../../services/version'
-import { ApprovalStates } from '../../models/Deployment'
+import { BadReq, Forbidden, NotFound } from '../../utils/result'
+import { ensureUserRole } from '../../utils/user'
 
 export const getVersion = [
   ensureUserRole('user'),
