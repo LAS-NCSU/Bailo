@@ -149,10 +149,11 @@ export const postUpload = [
 
       /** Saving the model * */
 
-      let model: any
+      let model: any = undefined
 
       if (mode === 'newVersion') {
         // Update an existing model's version array
+        const modelUuid = req.query.modelUuid
 
         model = await findModelByUuid(req.user!, modelUuid as string)
         model.versions.push(version._id)

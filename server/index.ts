@@ -2,7 +2,18 @@ import config from 'config'
 import express from 'express'
 import http from 'http'
 import next from 'next'
-import processUploads from './processors/processUploads'
+import { createIndexes } from './models/Model'
+import { getUiConfig } from './routes/v1/uiConfig'
+import { postUpload } from './routes/v1/upload'
+import { connectToMongoose } from './utils/database'
+import { ensureBucketExists } from './utils/minio'
+import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
+import { getVersion, putVersion, resetVersionApprovals, retireVersion } from './routes/v1/version'
+import { getDockerRegistryAuth } from './routes/v1/registryAuth'
+import { getUsers, getLoggedInUser, postRegenerateToken, favouriteModel, unfavouriteModel } from './routes/v1/users'
+import { getUser } from './utils/user'
+import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/requests'
+import logger, { expressErrorHandler, expressLogger } from './utils/logger'
 import {
   fetchRawModelFiles,
   retireDeployments,
@@ -21,20 +32,10 @@ import {
   getModelVersion,
   getModelVersions,
 } from './routes/v1/model'
-import { getUiConfig } from './routes/v1/uiConfig'
-import { postUpload } from './routes/v1/upload'
-import { connectToMongoose } from './utils/database'
-import { ensureBucketExists } from './utils/minio'
-import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
-import { getVersion, putVersion, resetVersionApprovals, retireVersion } from './routes/v1/version'
-import { getDockerRegistryAuth } from './routes/v1/registryAuth'
 import processDeployments from './processors/processDeployments'
-import { getUsers, getLoggedInUser, postRegenerateToken, favouriteModel, unfavouriteModel } from './routes/v1/users'
-import { getUser } from './utils/user'
-import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/requests'
-import logger, { expressErrorHandler, expressLogger } from './utils/logger'
-import { createIndexes } from './models/Model'
 import { processDeploymentDelete, processModelDelete } from './processors/processDeletes'
+import processUploads from './processors/processUploads'
+
 import { getSpecification } from './routes/v1/specification'
 
 const port = config.get('listen')
@@ -97,6 +98,7 @@ server.get('/api/v1/specification', ...getSpecification)
 server.get('/api/v1/docs/menu-content', ...getDocsMenuContent)
 
 server.use('/api', expressErrorHandler)
+console.log('STARTING SERVER')
 
 export async function startServer() {
   // technically, we do need to wait for this, but it's so quick

@@ -10,6 +10,14 @@ import { serializedModelFields } from './model'
 
 const authorisation = new AuthorisationBase()
 
+export function serializedVersionFields(): SerializerOptions {
+  return {
+    mandatory: ['_id', 'version', 'metadata.highLevelDetails.name'],
+    optional: [],
+    serializable: [{ type: createSerializer(serializedModelFields()), field: 'model' }],
+  }
+}
+
 interface GetVersionOptions {
   thin?: boolean
   populate?: boolean
@@ -28,14 +36,6 @@ export function isVersionRetired(version: Version): boolean {
   }
 
   return false
-}
-
-export function serializedVersionFields(): SerializerOptions {
-  return {
-    mandatory: ['_id', 'version', 'metadata.highLevelDetails.name'],
-    optional: [],
-    serializable: [{ type: createSerializer(serializedModelFields()), field: 'model' }],
-  }
 }
 
 export async function filterVersion<T>(user: UserDoc, unfiltered: T): Promise<T> {
