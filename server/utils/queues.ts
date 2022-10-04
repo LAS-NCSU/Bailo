@@ -11,11 +11,11 @@ import { simpleEmail } from '../templates/simpleEmail'
 import { connectToMongoose } from './database'
 import { sendEmail } from './smtp'
 
-let uploadQueue: PMongoQueue | undefined = undefined
-let deploymentQueue: PMongoQueue | undefined = undefined
-let modelDeleteQueue: PMongoQueue | undefined = undefined
-let deploymentDeleteQueue: PMongoQueue | undefined = undefined
-let mongoClient: mongoose.Connection | undefined = undefined
+let uploadQueue: PMongoQueue | undefined
+let deploymentQueue: PMongoQueue | undefined
+let modelDeleteQueue: PMongoQueue | undefined
+let deploymentDeleteQueue: PMongoQueue | undefined
+let mongoClient: mongoose.Connection | undefined
 
 export async function closeMongoInstance() {
   return mongoClient?.close()
@@ -168,7 +168,6 @@ async function setModelState(msg: QueueMessage, state: string, _e?: any) {
     }),
   })
 }
-
 
 async function sendDeploymentEmail(msg: QueueMessage, state: string, _e?: any) {
   const user = await getUserByInternalId(msg.payload.userId)

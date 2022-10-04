@@ -6,7 +6,7 @@ import https from 'https'
 import fetch from 'cross-fetch'
 import { connectToMongoose, disconnectFromMongoose } from '../utils/database'
 import UserModel from '../models/User'
-import { findDeploymentById, markDeploymentDeleted } from '../services/deployment'
+import { findDeploymentById, markDeploymentRetired } from '../services/deployment'
 import logger from '../utils/logger'
 import { getAccessToken } from '../routes/v1/registryAuth'
 
@@ -103,7 +103,7 @@ const httpsAgent = new https.Agent({
 
     logger.info('info', 'Deleted deployment')
     logger.info('Marking deployment as deleted')
-    await markDeploymentDeleted(deployment._id)
+    await markDeploymentRetired(deployment._id)
 
     const time = prettyMs(new Date().getTime() - startTime.getTime())
     await logger.info('info', `Deleted deployment with tag '${externalImage}' in ${time}`)

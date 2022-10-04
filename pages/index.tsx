@@ -97,9 +97,9 @@ export default function ExploreModels() {
                   </MuiLink>
                 </Link>
 
-                  <Typography variant='body1' sx={{ marginBottom: 2 }}>
-                    {model.currentMetadata.highLevelDetails.modelInASentence}
-                  </Typography>
+                <Typography variant='body1' sx={{ marginBottom: 2 }}>
+                  {model.currentMetadata.highLevelDetails.modelInASentence}
+                </Typography>
 
                 <Stack direction='row' spacing={1} sx={{ marginBottom: 2 }}>
                   {model.currentMetadata.highLevelDetails.tags.map((tag: string) => (
@@ -114,11 +114,11 @@ export default function ExploreModels() {
                   ))}
                 </Stack>
 
-                  {index !== models.length - 1 && (
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }} />
-                  )}
-                </Box>
-              ))}
+                {index !== models.length - 1 && (
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 2 }} />
+                )}
+              </Box>
+            ))}
 
           {models?.length === 0 && <EmptyBlob text='No models here' />}
         </Paper>

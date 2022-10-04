@@ -6,17 +6,6 @@ import processDeployments from './processors/processDeployments'
 import { processDeploymentDelete, processModelDelete } from './processors/processDeletes'
 import processUploads from './processors/processUploads'
 import { createIndexes } from './models/Model'
-import { getUiConfig } from './routes/v1/uiConfig'
-import { postUpload } from './routes/v1/upload'
-import { connectToMongoose } from './utils/database'
-import { ensureBucketExists } from './utils/minio'
-import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
-import { getVersion, putVersion, resetVersionApprovals, retireVersion } from './routes/v1/version'
-import { getDockerRegistryAuth } from './routes/v1/registryAuth'
-import { getUsers, getLoggedInUser, postRegenerateToken, favouriteModel, unfavouriteModel } from './routes/v1/users'
-import { getUser } from './utils/user'
-import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/requests'
-import logger, { expressErrorHandler, expressLogger } from './utils/logger'
 import {
   fetchRawModelFiles,
   retireDeployments,
@@ -37,7 +26,7 @@ import {
   deleteModel,
 } from './routes/v1/model'
 import { postUpload } from './routes/v1/upload'
-import { getVersion, putVersion, resetVersionApprovals, updateLastViewed } from './routes/v1/version'
+import { getVersion, putVersion, resetVersionApprovals, updateLastViewed, retireVersion } from './routes/v1/version'
 import { getUiConfig } from './routes/v1/uiConfig'
 import { connectToMongoose } from './utils/database'
 import { ensureBucketExists } from './utils/minio'
