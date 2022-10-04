@@ -1,14 +1,15 @@
 /* eslint-disable import/newline-after-import */
 import { createSchema } from '../services/schema'
 import { connectToMongoose, disconnectFromMongoose } from '../utils/database'
-import minimal from './example_schemas/minimal_upload_schema.json'
+
+import minimal from './example_schemas/las_scads_deployment_schema.json'
 ;(async () => {
   await connectToMongoose()
 
   await createSchema(
     {
-      name: 'Minimal Schema v10',
-      reference: '/Minimal/General/v10',
+      name: 'LAS SCADS Deployment Schema v1',
+      reference: '/LAS/SCADS/Deployment/v1',
       schema: minimal,
       use: 'UPLOAD',
     },

@@ -30,6 +30,12 @@ module.exports = {
     builderImage: 'seldonio/seldon-core-s2i-python37:1.10.0',
   },
 
+  s3: {
+    bucket: 'las-bailo',
+    region: 'us-east-1',
+    chunksize: '20971520',
+  },
+
   kaniko: {
     path: 'kaniko_executor',
   },
@@ -46,7 +52,7 @@ module.exports = {
       contactHref: 'mailto:hello@example.com?subject=Bailo%20Contact',
     },
     registry: {
-      host: 'localhost:8080',
+      host: 'bailo-public.ncsu-las.net',
     },
     uploadWarning: {
       showWarning: true,
@@ -95,6 +101,12 @@ module.exports = {
     protocol: 'http',
     host: 'localhost',
     port: 8080,
+  },
+
+  s3: {
+    bucket: 'las-bailo',
+    region: 'us-east-1',
+    chunksize: '20971520',
   },
 
   listen: 3000,

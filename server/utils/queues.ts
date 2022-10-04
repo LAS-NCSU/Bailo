@@ -169,6 +169,7 @@ async function setModelState(msg: QueueMessage, state: string, _e?: any) {
   })
 }
 
+
 async function sendDeploymentEmail(msg: QueueMessage, state: string, _e?: any) {
   const user = await getUserByInternalId(msg.payload.userId)
   if (!user) {

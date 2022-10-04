@@ -102,6 +102,15 @@ export default function Deployment() {
   const [tag, setTag] = useState<string>('')
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const actionOpen = anchorEl !== null
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const handleToggleConfirmDialog = () => {
+    setConfirmOpen(!confirmOpen)
+  }
+
+  const onCancelDelete = () => {
+    handleToggleConfirmDialog()
+  }
 
   const { currentUser, isCurrentUserLoading, isCurrentUserError } = useGetCurrentUser()
   const { deployment, isDeploymentLoading, isDeploymentError } = useGetDeployment(uuid)
@@ -184,6 +193,9 @@ export default function Deployment() {
     await postEndpoint(`/api/v1/deployment/${deployment?.uuid}/reset-approvals`, {}).then((res) => res.json())
   }
 
+  const requestDeploymentDelete = async () => {
+    await postEndpoint(`/api/v1/deployment/retire`, { uuids: [deployment?.uuid] }).then(() => router.reload())
+  }
   return (
     <>
       <Wrapper title={`Deployment: ${deployment.metadata.highLevelDetails.name}`} page='deployment'>
@@ -218,18 +230,28 @@ export default function Deployment() {
               approvals={[{ reviewer: deployment.metadata.contacts.manager, status: deployment.managerApproved }]}
             />
             <Divider orientation='vertical' flexItem />
-            <Button
-              id='model-actions-button'
-              aria-controls='model-actions-menu'
-              aria-haspopup='true'
-              aria-expanded={actionOpen ? 'true' : undefined}
-              onClick={actionMenuClicked}
-              variant='outlined'
-              data-test='requestDeploymentButton'
-              endIcon={actionOpen ? <UpArrow /> : <DownArrow />}
-            >
-              Actions
-            </Button>
+            {!deployment.deleted && (
+              <Button
+                id='model-actions-button'
+                aria-controls='model-actions-menu'
+                aria-haspopup='true'
+                aria-expanded={actionOpen ? 'true' : undefined}
+                onClick={actionMenuClicked}
+                variant='outlined'
+                data-test='requestDeploymentButton'
+                endIcon={actionOpen ? <UpArrow /> : <DownArrow />}
+              >
+                Actions
+              </Button>
+            )}
+            {deployment.deleted && (
+              <Typography
+                variant='body1'
+                sx={{ marginBottom: 2, textAlign: 'right', marginRight: 2, color: 'error.main', alignSelf: 'center' }}
+              >
+                Deployment Deleted
+              </Typography>
+            )}
           </Stack>
           <Menu anchorEl={anchorEl as HTMLDivElement} open={actionOpen} onClose={handleMenuClose}>
             <MenuList>

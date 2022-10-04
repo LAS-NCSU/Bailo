@@ -96,6 +96,50 @@ function Model() {
   const onVersionChange = setTargetValue(setSelectedVersion)
   const theme = useTheme() || lightTheme
 
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmRollbackOpen, setConfirmRollbackOpen] = useState(false)
+
+  const handleToggleConfirmDialog = () => {
+    setConfirmOpen(!confirmOpen)
+  }
+
+  const handleToggleConfirmVersionDeleteDialog = () => {
+    setConfirmRollbackOpen(!confirmRollbackOpen)
+  }
+
+  const onConfirmDelete = async () => {
+    await postEndpoint(`/api/v1/model/${uuid}/retire`, {}).then(() => router.push(`/`))
+  }
+
+  const onRollbackVersion = async () => {
+    await postEndpoint(`/api/v1/version/${version?._id}/retire`, {}).then(() => {
+      if (!versions) {
+        router.push('/')
+        return
+      }
+
+      // If there will be at least one non-deleted version left, just refresh the page
+      const remainingNonDeleted =
+        versions?.filter((d) => d._id !== version?._id && !(d.state?.build?.state === 'deleted')).length ?? 0
+
+      if (remainingNonDeleted > 0) {
+        router.reload()
+      }
+      // Or, if there won't be any non-deleted versions left, navigate to /
+      else {
+        router.push('/')
+      }
+    })
+  }
+
+  const onCancelDelete = () => {
+    handleToggleConfirmDialog()
+  }
+
+  const onCancelDeleteVersion = () => {
+    handleToggleConfirmVersionDeleteDialog()
+  }
+
   const handleGroupChange = (_event: React.SyntheticEvent, newValue: TabOptions) => {
     setGroup(newValue)
     mutateVersion()
@@ -397,11 +441,13 @@ function Model() {
                   label='Version'
                   onChange={onVersionChange}
                 >
-                  {versions.map((versionObj: Version) => (
-                    <MenuItem key={`item-${versionObj._id}`} value={versionObj.version}>
-                      {versionObj.version}
-                    </MenuItem>
-                  ))}
+                  {versions
+                    .filter((v) => !(v.state?.build?.state === 'deleted'))
+                    .map((versionObj: Version) => (
+                      <MenuItem key={`item-${versionObj._id}`} value={versionObj.version}>
+                        {versionObj.version}
+                      </MenuItem>
+                    ))}
                 </Select>
               </FormControl>
             </Stack>
