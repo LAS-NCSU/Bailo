@@ -20,6 +20,7 @@ import { serializedSchemaFields } from '../services/schema'
 import { serializedUserFields } from '../services/user'
 import { serializedVersionFields } from '../services/version'
 import { ensurePathExists, getFilesInDir } from './filesystem'
+import { consoleError } from '../../utils/logging'
 
 const appRoot = getAppRoot.toString()
 
@@ -54,11 +55,11 @@ class Writer {
     return `${line}:${src.line}`
   }
 
-  static representValue(value: any) {
+  static representValue(value: unknown) {
     return typeof value === 'object' ? inspect(value) : String(value)
   }
 
-  getAttributes(data) {
+  static getAttributes(data) {
     let attributes = omit(data, [
       'name',
       'hostname',
@@ -98,7 +99,7 @@ class Writer {
   write(data) {
     const level = Writer.getLevel(data.level)
     const src = this.getSrc(data.src)
-    const attributes = this.getAttributes(data)
+    const attributes = Writer.getAttributes(data)
     const formattedAttributes = attributes.length ? ` (${attributes})` : ''
 
     const message = `${level} - (${src}): ${data.msg}${formattedAttributes}`
@@ -179,11 +180,9 @@ async function processStroomFiles() {
 
     const { size } = await fsPromise.stat(from)
 
-    if (size < 0) {
-      continue
+    if (size >= 0) {
+      await fsPromise.rename(from, to)
     }
-
-    await fsPromise.rename(from, to)
   }
 
   const processing = await getFilesInDir(processingFolder)
@@ -193,7 +192,7 @@ async function processStroomFiles() {
       await sendLogsToStroom(name)
     } catch (e) {
       // ironically we cannot use our logger here.
-      console.error(e, 'Unable to send logs to ACE')
+      consoleError('Unable to send logs to ACE', e)
     }
   }
 }
@@ -329,7 +328,6 @@ export async function expressErrorHandler(
     throw err
   }
 
-  const code = typeof err.code === 'number' && err.code > 100 && err.code < 600 ? err.code : 500
   const localLogger = err.logger || req.log
 
   localLogger.warn(err.data, err.message)

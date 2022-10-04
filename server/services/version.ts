@@ -1,8 +1,8 @@
 import { castArray } from 'lodash'
-import { Version, ModelId } from '../../types/interfaces'
+import { DateString, Version, ModelId } from '../../types/interfaces'
 import { UserDoc } from '../models/User'
 import VersionModel, { VersionDoc } from '../models/Version'
-import AuthorisationBase from '../utils/AuthorisationBase'
+import Authorisation from '../external/Authorisation'
 import { asyncFilter } from '../utils/general'
 import { createSerializer, SerializerOptions } from '../utils/logger'
 import { BadReq, Forbidden } from '../utils/result'
@@ -38,10 +38,30 @@ export function isVersionRetired(version: Version): boolean {
   return false
 }
 
+interface GetVersionOptions {
+  thin?: boolean
+  populate?: boolean
+  retired?: boolean
+  limit?: number
+}
+
+export function isVersionRetired(version: Version): boolean {
+  const {
+    state: {
+      build: { state },
+    },
+  } = version
+  if (state === 'retured') {
+    return true
+  }
+
+  return false
+}
+
 export async function filterVersion<T>(user: UserDoc, unfiltered: T): Promise<T> {
   const versions = castArray(unfiltered)
 
-  const filtered = await asyncFilter(versions, (version: VersionDoc) => authorisation.canUserSeeVersion(user, version))
+  const filtered = await asyncFilter(versions, (version: VersionDoc) => auth.canUserSeeVersion(user, version))
 
   return Array.isArray(unfiltered) ? (filtered as unknown as T) : filtered[0]
 }
@@ -86,7 +106,7 @@ export async function markVersionState(user: UserDoc, _id: ModelId, state: strin
   const version = await findVersionById(user, _id)
 
   if (!version) {
-    throw BadReq({ code: 'model_invalid_type', _id }, `Provided invalid version '${_id}'`)
+    throw BadReq({ code: 'model_version_invalid', versionId: _id }, `Provided invalid version '${_id}'`)
   }
 
   const buildState: { build: { state: string; reason?: string } } = {
@@ -115,11 +135,27 @@ interface CreateVersion {
 export async function createVersion(user: UserDoc, data: CreateVersion) {
   const version = new VersionModel(data)
 
-  if (!(await authorisation.canUserSeeVersion(user, version))) {
+  if (!(await auth.canUserSeeVersion(user, version))) {
     throw Forbidden({ data }, 'Unable to create version, failed permissions check.')
   }
 
   await version.save()
 
   return version
+}
+
+export async function updateManagerLastViewed(id: ModelId) {
+  return VersionModel.findOneAndUpdate(
+    { _id: id },
+    { $set: { managerLastViewed: new Date() as DateString } },
+    { timestamps: false }
+  )
+}
+
+export async function updateReviewerLastViewed(id: ModelId) {
+  return VersionModel.findOneAndUpdate(
+    { _id: id },
+    { $set: { reviewerLastViewed: new Date() as DateString } },
+    { timestamps: false }
+  )
 }

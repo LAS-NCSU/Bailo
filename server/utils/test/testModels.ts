@@ -1,9 +1,9 @@
 import { TextEncoder } from 'util'
+import { ObjectId } from 'mongodb'
+import { ApprovalStates } from '../../../types/interfaces'
+import UserModel from '../../models/User'
 
 global.TextEncoder = TextEncoder
-import { ObjectId } from 'mongodb'
-import { ApprovalStates } from '../../models/Deployment'
-import UserModel from '../../models/User'
 
 export const deploymentUuid = 'test-deployment'
 export const requesterId = new ObjectId()

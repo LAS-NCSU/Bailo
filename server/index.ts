@@ -2,6 +2,9 @@ import config from 'config'
 import express from 'express'
 import http from 'http'
 import next from 'next'
+import processDeployments from './processors/processDeployments'
+import { processDeploymentDelete, processModelDelete } from './processors/processDeletes'
+import processUploads from './processors/processUploads'
 import { createIndexes } from './models/Model'
 import { getUiConfig } from './routes/v1/uiConfig'
 import { postUpload } from './routes/v1/upload'
@@ -31,11 +34,19 @@ import {
   getModelSchema,
   getModelVersion,
   getModelVersions,
+  deleteModel,
 } from './routes/v1/model'
-import processDeployments from './processors/processDeployments'
-import { processDeploymentDelete, processModelDelete } from './processors/processDeletes'
-import processUploads from './processors/processUploads'
-
+import { postUpload } from './routes/v1/upload'
+import { getVersion, putVersion, resetVersionApprovals, updateLastViewed } from './routes/v1/version'
+import { getUiConfig } from './routes/v1/uiConfig'
+import { connectToMongoose } from './utils/database'
+import { ensureBucketExists } from './utils/minio'
+import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
+import { getDockerRegistryAuth } from './routes/v1/registryAuth'
+import { getUsers, getLoggedInUser, postRegenerateToken, favouriteModel, unfavouriteModel } from './routes/v1/users'
+import { getUser } from './utils/user'
+import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/requests'
+import logger, { expressErrorHandler, expressLogger } from './utils/logger'
 import { getSpecification } from './routes/v1/specification'
 
 const port = config.get('listen')
@@ -63,6 +74,7 @@ server.get('/api/v1/model/:uuid/schema', ...getModelSchema)
 server.get('/api/v1/model/:uuid/versions', ...getModelVersions)
 server.get('/api/v1/model/:uuid/version/:version', ...getModelVersion)
 server.get('/api/v1/model/:uuid/deployments', ...getModelDeployments)
+server.delete('/api/v1/model/:uuid', ...deleteModel)
 server.post('/api/v1/deployment/retire', ...retireDeployments)
 
 server.post('/api/v1/deployment', ...postDeployment)
@@ -74,6 +86,7 @@ server.get('/api/v1/deployment/:uuid/version/:version/raw/:fileType', ...fetchRa
 server.get('/api/v1/version/:id', ...getVersion)
 server.put('/api/v1/version/:id', ...putVersion)
 server.post('/api/v1/version/:id/reset-approvals', ...resetVersionApprovals)
+server.put('/api/v1/version/:id/lastViewed/:role', ...updateLastViewed)
 server.post('/api/v1/version/:id/retire', ...retireVersion)
 
 server.get('/api/v1/schemas', ...getSchemas)

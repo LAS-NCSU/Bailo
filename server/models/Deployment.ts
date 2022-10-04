@@ -1,16 +1,10 @@
-import { Document, model, Schema, Types } from 'mongoose'
+import { Schema, model, Document, Types } from 'mongoose'
+import MongooseDelete from 'mongoose-delete'
 import logger from '../utils/logger'
 import { ModelDoc } from './Model'
 import { UserDoc } from './User'
 import { VersionDoc } from './Version'
-
-export const approvalStateOptions = ['Accepted', 'Declined', 'No Response']
-
-export enum ApprovalStates {
-  Accepted = 'Accepted',
-  Declined = 'Declined',
-  NoResponse = 'No Response',
-}
+import { ApprovalStates, approvalStateOptions } from '../../types/interfaces'
 
 export interface LogStatement {
   timestamp: Date
@@ -42,7 +36,7 @@ export interface Deployment {
 
 export type DeploymentDoc = Deployment & Document<any, any, Deployment>
 
-const DeploymentSchema = new Schema<Deployment>(
+const DeploymentSchema: any = new Schema<Deployment>(
   {
     schemaRef: { type: String, required: true },
     uuid: { type: String, required: true, index: true, unique: true },
@@ -64,8 +58,11 @@ const DeploymentSchema = new Schema<Deployment>(
   }
 )
 
+DeploymentSchema.plugin(MongooseDelete, { overrideMethods: 'all', deletedBy: true, deletedByType: String })
+
 DeploymentSchema.methods.log = async function (level: string, msg: string) {
   logger[level]({ deploymentId: this._id }, msg)
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   await DeploymentModel.findOneAndUpdate({ _id: this._id }, { $push: { logs: { timestamp: new Date(), level, msg } } })
 }
 
