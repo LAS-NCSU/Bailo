@@ -1,9 +1,15 @@
+import bodyParser from 'body-parser'
 import { Request, Response } from 'express'
 import RequestModel, { ApprovalTypes, RequestDoc } from '../../models/Request'
 import { ApprovalStates } from '../../../types/interfaces'
 import { getModelDeleteQueue } from '../../utils/queues'
 import { createVersionRequests } from '../../services/request'
-import { findVersionById, updateManagerLastViewed, updateReviewerLastViewed, isVersionRetired } from '../../services/version'
+import {
+  findVersionById,
+  updateManagerLastViewed,
+  updateReviewerLastViewed,
+  isVersionRetired,
+} from '../../services/version'
 import { BadReq, Forbidden, NotFound } from '../../utils/result'
 import { ensureUserRole } from '../../utils/user'
 import { getUserById } from '../../services/user'

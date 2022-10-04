@@ -6,7 +6,6 @@ import { customAlphabet } from 'nanoid'
 import { Deployment } from '@/types/interfaces'
 import { getUserById } from '../../services/user'
 import { getDeploymentDeleteQueue } from '../../utils/queues'
-import { VersionDoc } from '../../models/Version'
 import { ApprovalStates } from '../../../types/interfaces'
 import { findVersionByName, isVersionRetired } from '../../services/version'
 import {
@@ -150,8 +149,12 @@ export const postDeployment = [
 
     if (!version) {
       throw NotFound(
-        { code: 'version_not_found', version: body.highLevelDetails.initialVersionRequested },
-        `Unable to find version: '${body.highLevelDetails.initialVersionRequested}'`
+        {
+          code: 'version_not_found',
+          modelId: body.highLevelDetails.modelID,
+          version: body.highLevelDetails.initialVersionRequested,
+        },
+        `Unable to find verison with name: '${body.highLevelDetails.initialVersionRequested}'`
       )
     }
 
@@ -166,18 +169,6 @@ export const postDeployment = [
 
     const uuid = `${name}-${nanoid()}`
     req.log.info({ uuid }, `Named deployment '${uuid}'`)
-
-    const version = await findVersionByName(req.user, model._id, body.highLevelDetails.initialVersionRequested)
-    if (!version) {
-      throw NotFound(
-        {
-          code: 'version_not_found',
-          modelId: body.highLevelDetails.modelID,
-          version: body.highLevelDetails.initialVersionRequested,
-        },
-        `Unable to find verison with name: '${body.highLevelDetails.initialVersionRequested}'`
-      )
-    }
 
     const versionArray = [version._id]
 

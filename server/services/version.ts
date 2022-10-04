@@ -8,7 +8,7 @@ import { createSerializer, SerializerOptions } from '../utils/logger'
 import { BadReq, Forbidden } from '../utils/result'
 import { serializedModelFields } from './model'
 
-const authorisation = new AuthorisationBase()
+const auth = new Authorisation()
 
 export function serializedVersionFields(): SerializerOptions {
   return {
@@ -24,20 +24,6 @@ interface GetVersionOptions {
   retired?: boolean
   limit?: number
 }
-
-export function isVersionRetired(version: Version): boolean {
-  const {
-    state: {
-      build: { state },
-    },
-  } = version
-  if (state === 'retured') {
-    return true
-  }
-
-  return false
-}
-
 interface GetVersionOptions {
   thin?: boolean
   populate?: boolean
