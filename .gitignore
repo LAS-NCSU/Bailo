@@ -33,6 +33,7 @@ certs/key.pem
 
 # User's personal docker-compose-dev file
 docker-compose-dev-personal.yml 
+docker-compose-prod.yml
 
 # Helm
 helm/bailo/charts
