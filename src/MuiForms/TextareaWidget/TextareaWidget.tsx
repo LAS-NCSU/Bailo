@@ -1,6 +1,7 @@
 import TextField, { StandardTextFieldProps as TextFieldProps } from '@mui/material/TextField'
 import { utils, WidgetProps } from '@rjsf/core'
 import React from 'react'
+import { omit } from 'lodash'
 
 const { getDisplayLabel } = utils
 
@@ -25,8 +26,6 @@ function TextareaWidget({
   schema,
   uiSchema,
   rawErrors = [],
-  formContext,
-  registry, // pull out the registry so it doesn't end up in the textFieldProps
   ...textFieldProps
 }: CustomWidgetProps) {
   const _onChange = ({ target: { value: newValue } }: React.ChangeEvent<HTMLInputElement>) =>
@@ -47,7 +46,7 @@ function TextareaWidget({
       autoFocus={autofocus}
       required={required}
       disabled={disabled || readonly}
-      type={inputType as string}
+      type={inputType}
       multiline={isMultiline}
       value={value || value === 0 ? value : ''}
       error={rawErrors.length > 0}
@@ -56,7 +55,7 @@ function TextareaWidget({
       onFocus={_onFocus}
       maxRows={isMultiline ? height * 3 : 1}
       minRows={height}
-      {...(textFieldProps as TextFieldProps)}
+      {...(omit(textFieldProps, ['formContext', 'registry']) as TextFieldProps)}
     />
   )
 }

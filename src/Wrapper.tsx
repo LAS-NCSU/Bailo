@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode, useContext, useEffect, useMemo, useState } from 'react'
+import { MouseEvent, ReactElement, ReactNode, useContext, useEffect, useMemo, useState } from 'react'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeftTwoTone'
 import ContactSupportIcon from '@mui/icons-material/ContactSupportTwoTone'
 import DarkModeIcon from '@mui/icons-material/DarkModeTwoTone'
@@ -25,22 +25,20 @@ import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import MenuList from '@mui/material/MenuList'
-import { styled, ThemeProvider } from '@mui/material/styles'
+import { styled, ThemeProvider, useTheme } from '@mui/material/styles'
 import Switch from '@mui/material/Switch'
 import Toolbar from '@mui/material/Toolbar'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import { useTheme } from '@mui/material'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useGetNumRequests } from '../data/requests'
 import { useGetUiConfig } from '../data/uiConfig'
 import { useGetCurrentUser } from '../data/user'
-import { DarkModeContext } from '../pages/_app'
 import Banner from './Banner'
 import UserAvatar from './common/UserAvatar'
 import Copyright from './Copyright'
-import { lightTheme } from './theme'
+import ThemeModeContext from './contexts/themeModeContext'
 
 const drawerWidth = 240
 
@@ -104,8 +102,8 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
     setOpen(!open)
   }
 
-  const theme = useTheme() || lightTheme
-  const toggleDarkMode: any = useContext(DarkModeContext)
+  const theme = useTheme()
+  const { toggleDarkMode } = useContext(ThemeModeContext)
 
   const { uiConfig, isUiConfigLoading, isUiConfigError } = useGetUiConfig()
   const { numRequests, isNumRequestsLoading } = useGetNumRequests()
@@ -113,7 +111,7 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
 
   const [pageTopStyling, setPageTopStyling] = useState({})
   const [contentTopStyling, setContentTopStyling] = useState({})
-  const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
 
   const actionOpen = anchorEl !== null
 
@@ -138,8 +136,8 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
     return <p>Error loading UI Config: {isUiConfigError.info?.message}</p>
   }
 
-  const userMenuClicked = (event: any) => {
-    setAnchorEl(event.currentTarget as HTMLDivElement)
+  const handleUserMenuClicked = (event: MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget)
   }
 
   const handleMenuClose = () => {
@@ -148,7 +146,14 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
 
   const headerTitle =
     typeof title === 'string' ? (
-      <Typography component='h1' variant='h6' color='inherit' noWrap sx={{ mr: '55px', flexGrow: 1 }}>
+      <Typography
+        noWrap
+        component='h1'
+        variant='h6'
+        color='inherit'
+        data-test='headerTitle'
+        sx={{ mr: '55px', flexGrow: 1 }}
+      >
         {title}
       </Typography>
     ) : (
@@ -171,7 +176,12 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
       <Box sx={{ display: 'flex' }}>
         <CssBaseline />
         {!isUiConfigLoading && uiConfig && uiConfig.banner.enable && <Box sx={{ mt: 20 }} />}
-        <AppBar sx={{ ...pageTopStyling, top: 'unset', backgroundColor: 'primary' }} position='absolute' open={open}>
+        <AppBar
+          open={open}
+          position='absolute'
+          data-test='appBar'
+          sx={{ ...pageTopStyling, top: 'unset', backgroundColor: 'primary' }}
+        >
           <Toolbar
             sx={{
               pr: '24px', // keep right padding when drawer closed
@@ -196,14 +206,13 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
                 </a>
               </Link>
             </Box>
-            <Typography
-              variant='h6'
-              noWrap
-              component='div'
-              sx={{ flexGrow: 1, ml: 2, display: { xs: 'none', md: 'flex' } }}
-            >
-              Bailo
-            </Typography>
+            <Box sx={{ flexGrow: 1, ml: 2, display: { xs: 'none', md: 'flex', cursor: 'pointer' } }}>
+              <Link href='/' passHref>
+                <a style={{ color: 'inherit', textDecoration: 'inherit', fontSize: '1.25rem', fontWeight: 500 }}>
+                  Bailo
+                </a>
+              </Link>
+            </Box>
             {headerTitle}
             <Link href='/review' passHref>
               <IconButton color='inherit'>
@@ -214,15 +223,10 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
             </Link>
             {currentUser ? (
               <>
-                <IconButton onClick={userMenuClicked} data-test='showUserMenu'>
+                <IconButton onClick={handleUserMenuClicked} data-test='showUserMenu'>
                   <UserAvatar username={currentUser.id} size='chip' />
                 </IconButton>
-                <Menu
-                  sx={{ mt: '10px', right: 0 }}
-                  anchorEl={anchorEl as HTMLDivElement}
-                  open={actionOpen}
-                  onClose={handleMenuClose}
-                >
+                <Menu sx={{ mt: '10px', right: 0 }} anchorEl={anchorEl} open={actionOpen} onClose={handleMenuClose}>
                   <MenuList>
                     <MenuItem data-test='toggleDarkMode'>
                       <ListItemIcon>
@@ -336,12 +340,12 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
                     <LinkIcon />
                   )}
                 </ListItemIcon>
-                <ListItemText primary='Support' />
+                <ListItemText primary='API' />
               </ListItem>
             </Link>
             <Link href='/help' passHref>
               <ListItem button selected={page === 'help'}>
-                <ListItemIcon>
+                <ListItemIcon data-test='supportLink'>
                   {!open ? (
                     <Tooltip title='Help & Support' arrow placement='right'>
                       <ContactSupportIcon />

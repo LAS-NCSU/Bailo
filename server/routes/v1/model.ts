@@ -114,6 +114,8 @@ export const getModelVersions = [
   ensureUserRole('user'),
   async (req: Request, res: Response) => {
     const { uuid } = req.params
+    const { logs } = req.query
+    const showLogs = logs === 'true'
 
     const model = await findModelByUuid(req.user, uuid)
 
@@ -121,7 +123,7 @@ export const getModelVersions = [
       throw NotFound({ code: 'model_not_found', uuid }, `Unable to find model '${uuid}'`)
     }
     // Might need to add legacy {thin: true} prop
-    const versions = await findModelVersions(req.user!, model._id, { retired: false })
+    const versions = await findModelVersions(req.user!, model._id, { retired: false, showLogs })
 
     req.log.info(
       { code: 'fetch_versions_for_model', modelId: model._id, versions },
@@ -135,6 +137,8 @@ export const getModelVersion = [
   ensureUserRole('user'),
   async (req: Request, res: Response) => {
     const { uuid, version: versionName } = req.params
+    const { logs } = req.query
+    const showLogs = logs === 'true'
 
     const model = await findModelByUuid(req.user, uuid)
 
@@ -152,7 +156,7 @@ export const getModelVersion = [
       return res.json(versions[0])
     }
 
-    const version = await findVersionByName(req.user!, model._id, versionName)
+    const version = await findVersionByName(req.user!, model._id, versionName, { showLogs })
 
     if (!version) {
       req.log.info({ code: 'version_not_found', versionName }, `Unable to find version '${versionName}'`)

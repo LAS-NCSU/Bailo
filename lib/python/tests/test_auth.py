@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+import os
 
 from ..bailoclient.auth import CognitoSRPAuthenticator
 from ..bailoclient.config import APIConfig, BailoConfig, CognitoConfig
@@ -10,15 +11,15 @@ from ..bailoclient.utils.exceptions import UnauthorizedException
 @pytest.fixture()
 def cognito_authenticator():
     cognito_config = CognitoConfig(
-        user_pool_id="BAILO_USERPOOL",
-        client_id="BAILO_CLIENT_ID",
-        client_secret="BAILO_CLIENT_SECRET",
-        region="BAILO_REGION",
+        user_pool_id="COGNITO_USERPOOL",
+        client_id="COGNITO_CLIENT_ID",
+        client_secret="COGNITO_CLIENT_SECRET",
+        region="COGNITO_REGION",
     )
 
     config = BailoConfig(
         cognito=cognito_config,
-        api=APIConfig(url="http://localhost:8080", ca_verify=True),
+        api=APIConfig(url=os.environ["BAILO_URL"], ca_verify=True),
     )
 
     authenticator = CognitoSRPAuthenticator(config)
@@ -35,7 +36,7 @@ def test_authenticate_user(cognito_authenticator):
 
 
 def test_authenticate_user_true_after_authentication(cognito_authenticator):
-    cognito_authenticator.authenticate_user("BAILO_USERNAME", "BAILO_PASSWORD")
+    cognito_authenticator.authenticate_user("COGNITO_USERNAME", "COGNITO_PASSWORD")
 
     assert cognito_authenticator.is_authenticated()
 
@@ -48,7 +49,7 @@ def test_auth_headers_raises_error_if_not_authenticated(cognito_authenticator):
 
 
 def test_auth_headers_(cognito_authenticator):
-    cognito_authenticator.authenticate_user("BAILO_USERNAME", "BAILO_PASSWORD")
+    cognito_authenticator.authenticate_user("COGNITO_USERNAME", "COGNITO_PASSWORD")
 
     headers = cognito_authenticator.get_authorisation_headers()
 

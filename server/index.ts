@@ -34,20 +34,21 @@ import {
   getModelSchema,
   getModelVersion,
   getModelVersions,
-  deleteModel,
 } from './routes/v1/model'
-import { postUpload } from './routes/v1/upload'
-import { getVersion, putVersion, resetVersionApprovals, updateLastViewed } from './routes/v1/version'
-import { getUiConfig } from './routes/v1/uiConfig'
-import { connectToMongoose } from './utils/database'
-import { ensureBucketExists } from './utils/minio'
-import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
 import { getDockerRegistryAuth } from './routes/v1/registryAuth'
-import { getUsers, getLoggedInUser, postRegenerateToken, favouriteModel, unfavouriteModel } from './routes/v1/users'
-import { getUser } from './utils/user'
 import { getNumRequests, getRequests, postRequestResponse } from './routes/v1/requests'
-import logger, { expressErrorHandler, expressLogger } from './utils/logger'
+import { getDefaultSchema, getSchema, getSchemas } from './routes/v1/schema'
 import { getSpecification } from './routes/v1/specification'
+import { getUiConfig } from './routes/v1/uiConfig'
+import { postUpload } from './routes/v1/upload'
+import { favouriteModel, getLoggedInUser, getUsers, postRegenerateToken, unfavouriteModel } from './routes/v1/users'
+import { getVersion, putVersion, resetVersionApprovals, updateLastViewed } from './routes/v1/version'
+import { connectToMongoose } from './utils/database'
+import logger, { expressErrorHandler, expressLogger } from './utils/logger'
+import { ensureBucketExists } from './utils/minio'
+
+import { getUser } from './utils/user'
+import { pullBuilderImage } from './utils/build/build'
 
 const port = config.get('listen')
 const dev = process.env.NODE_ENV !== 'production'
@@ -117,8 +118,10 @@ export async function startServer() {
   // technically, we do need to wait for this, but it's so quick
   // that nobody should notice unless they want to upload an image
   // within the first few milliseconds of the _first_ time it's run
-  ensureBucketExists(config.get('minio.uploadBucket'))
-  ensureBucketExists(config.get('minio.registryBucket'))
+  if (config.get('minio.createBuckets')) {
+    ensureBucketExists(config.get('minio.uploadBucket'))
+    ensureBucketExists(config.get('minio.registryBucket'))
+  }
 
   // we don't actually need to wait for mongoose to connect before
   // we start serving connections

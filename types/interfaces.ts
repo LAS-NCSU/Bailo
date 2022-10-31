@@ -60,7 +60,7 @@ export interface Model {
   schemaRef: string
   uuid: string
 
-  parent: Types.ObjectId
+  parent: Types.ObjectId | undefined
   versions: Array<Types.ObjectId>
   retired: boolean
 
@@ -122,6 +122,8 @@ export interface Step {
   state: any
   index: number
 
+  steps?: Array<Step>
+
   type: StepType
   section: string
   schemaRef: string
@@ -180,7 +182,7 @@ export type DocsMenuContent = DocFileOrHeading[]
 export enum ModelUploadType {
   Zip = 'Code and binaries',
   ModelCard = 'Model card only',
-  Docker = 'Upload an exported Docker container',
+  Docker = 'Prebuilt Docker image',
 }
 
 export enum UploadModes {

@@ -23,12 +23,7 @@ interface GetVersionOptions {
   populate?: boolean
   retired?: boolean
   limit?: number
-}
-interface GetVersionOptions {
-  thin?: boolean
-  populate?: boolean
-  retired?: boolean
-  limit?: number
+  showLogs?: boolean
 }
 
 export function isVersionRetired(version: Version): boolean {
@@ -54,7 +49,8 @@ export async function filterVersion<T>(user: UserDoc, unfiltered: T): Promise<T>
 
 export async function findVersionById(user: UserDoc, id: ModelId, opts?: GetVersionOptions) {
   let version = VersionModel.findById(id)
-  if (opts?.thin) version = version.select({ state: 0, logs: 0, metadata: 0 })
+  if (opts?.thin) version = version.select({ state: 0, metadata: 0 })
+  if (!opts?.showLogs) version = version.select({ logs: 0 })
   if (opts?.populate) version = version.populate('model')
 
   return filterVersion(user, await version)
@@ -62,7 +58,8 @@ export async function findVersionById(user: UserDoc, id: ModelId, opts?: GetVers
 
 export async function findVersionByName(user: UserDoc, model: ModelId, name: string, opts?: GetVersionOptions) {
   let version = VersionModel.findOne({ model, version: name })
-  if (opts?.thin) version = version.select({ state: 0, logs: 0, metadata: 0 })
+  if (opts?.thin) version = version.select({ state: 0, metadata: 0 })
+  if (!opts?.showLogs) version = version.select({ logs: 0 })
   if (opts?.populate) version = version.populate('model')
 
   return filterVersion(user, await version)
@@ -76,6 +73,7 @@ export async function findModelVersions(user: UserDoc, model: ModelId, opts?: Ge
   let versions = VersionModel.find(query).sort({ createdAt: -1 })
 
   if (opts?.thin) versions = versions.select({ state: 0, logs: 0, metadata: 0 })
+  if (!opts?.showLogs) versions = versions.select({ logs: 0 })
   if (opts?.populate) versions = versions.populate('model')
   if (opts?.limit) {
     versions.limit(opts.limit)

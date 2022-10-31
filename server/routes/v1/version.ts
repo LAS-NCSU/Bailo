@@ -1,6 +1,6 @@
 import bodyParser from 'body-parser'
 import { Request, Response } from 'express'
-import RequestModel, { ApprovalTypes, RequestDoc } from '../../models/Request'
+import RequestModel, { ApprovalTypes } from '../../models/Request'
 import { ApprovalStates } from '../../../types/interfaces'
 import { getModelDeleteQueue } from '../../utils/queues'
 import { createVersionRequests } from '../../services/request'
@@ -18,8 +18,10 @@ export const getVersion = [
   ensureUserRole('user'),
   async (req: Request, res: Response) => {
     const { id } = req.params
+    const { logs } = req.query
+    const showLogs = logs === 'true'
 
-    const version = await findVersionById(req.user!, id)
+    const version = await findVersionById(req.user, id, { showLogs })
 
     if (!version) {
       throw NotFound({ code: 'version_not_found', versionId: id }, 'Unable to find version')
@@ -38,7 +40,7 @@ export const putVersion = [
     const { id } = req.params
     const metadata = req.body
 
-    const version = await findVersionById(req.user!, id, { populate: true })
+    const version = await findVersionById(req.user, id, { populate: true })
 
     if (!version) {
       throw NotFound({ code: 'version_not_found', id }, 'Unable to find version')
@@ -55,7 +57,7 @@ export const putVersion = [
       getUserById(version.metadata.contacts.reviewer),
     ])
 
-    await RequestModel.remove({
+    await RequestModel.deleteMany({
       version: version._id,
       request: 'Upload',
       $or: [
@@ -89,7 +91,7 @@ export const resetVersionApprovals = [
   async (req: Request, res: Response) => {
     const { id } = req.params
     const { user } = req
-    const version = await findVersionById(req.user!, id, { populate: true })
+    const version = await findVersionById(req.user, id, { populate: true })
     if (!version) {
       throw BadReq({ code: 'version_not_found' }, 'Unable to find requested version')
     }
