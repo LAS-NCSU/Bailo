@@ -10,7 +10,7 @@ module.exports = {
   },
 
   minio: {
-    endPoint: 's3://las-bailo/bailo/',
+    endPoint: 'localhost',
     port: 9000,
     useSSL: false,
     accessKey: 'minioadmin',
