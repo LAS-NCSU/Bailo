@@ -21,7 +21,6 @@ import { findSchemaByRef } from '../../services/schema'
 import { BadReq, Forbidden, NotFound, Unauthorised } from '../../utils/result'
 import { ensureUserRole } from '../../utils/user'
 import { validateSchema } from '../../utils/validateSchema'
-import { getUserById } from '../../services/user'
 
 const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 6)
 

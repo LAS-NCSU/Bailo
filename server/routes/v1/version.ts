@@ -169,7 +169,7 @@ export const retireVersion = [
     }
 
     if (user?.id !== version.metadata.contacts.uploader) {
-      throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to do this operation.')
+      throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to perform this operation.')
     }
 
     if (isVersionRetired(version)) {

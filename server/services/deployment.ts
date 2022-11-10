@@ -20,10 +20,6 @@ export function isDeploymentRetired(deployment: Deployment): boolean {
   return deployment.retired
 }
 
-export function isDeploymentRetired(deployment: Deployment): boolean {
-  return deployment.retired
-}
-
 export function serializedDeploymentFields(): SerializerOptions {
   return {
     mandatory: ['_id', 'uuid', 'name'],
@@ -71,7 +67,11 @@ export interface DeploymentFilter {
   retired?: boolean
 }
 
-export async function findDeployments(user: UserDoc, { owner, model, retired = false }: DeploymentFilter, opts?: GetDeploymentOptions) {
+export async function findDeployments(
+  user: UserDoc,
+  { owner, model, retired = false }: DeploymentFilter,
+  opts?: GetDeploymentOptions
+) {
   const query: any = {}
 
   query.retired = retired

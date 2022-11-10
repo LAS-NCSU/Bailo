@@ -149,6 +149,7 @@ export const postUpload = [
         parent: undefined,
 
         owner: req.user._id,
+        retired: false,
       })
     }
 
