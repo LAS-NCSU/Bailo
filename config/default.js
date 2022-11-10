@@ -10,7 +10,7 @@ module.exports = {
   },
 
   minio: {
-    endPoint: 'localhost',
+    endPoint: 's3://las-bailo/bailo/',
     port: 9000,
     useSSL: false,
     accessKey: 'minioadmin',
@@ -42,6 +42,12 @@ module.exports = {
     environment: 'img',
   },
 
+  s3: {
+    bucket: 'las-bailo',
+    region: 'us-east-1',
+    chunksize: '20971520',
+  },
+
   // overwritten via Helm charts
   openshift: {
     namespace: '',
@@ -61,7 +67,7 @@ module.exports = {
       contactHref: 'mailto:hello@example.com?subject=Bailo%20Contact',
     },
     registry: {
-      host: 'localhost:8080',
+      host: 'bailo-public.ncsu-las.net',
     },
     uploadWarning: {
       showWarning: true,
