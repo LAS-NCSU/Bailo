@@ -16,7 +16,7 @@ import { BadReq, Conflict, GenericError } from '../../utils/result'
 import { ensureUserRole } from '../../utils/user'
 import { validateSchema } from '../../utils/validateSchema'
 import VersionModel from '../../models/Version'
-import { ModelUploadType, UploadModes } from '../../../types/interfaces'
+import { ModelUploadType, SeldonVersion, UploadModes } from '../../../types/interfaces'
 import { getPropertyFromEnumValue } from '../../utils/general'
 
 export type MinioFile = Express.Multer.File & { bucket: string }
@@ -83,6 +83,13 @@ function checkTarFile(name: string, file: Array<MinioFile>) {
   }
 }
 
+function checkSeldonVersion(seldonVersion: string) {
+  const seldonVersionsFromConfig: Array<SeldonVersion> = config.get('uiConfig.seldonVersions')
+  if (seldonVersionsFromConfig.filter((version) => version.image === seldonVersion).length === 0) {
+    throw BadReq({ seldonVersion }, `Seldon version ${seldonVersion} not recognised`)
+  }
+}
+
 export const postUpload = [
   ensureUserRole('user'),
   upload.fields([{ name: 'binary' }, { name: 'code' }, { name: 'docker' }]),
@@ -101,6 +108,7 @@ export const postUpload = [
       case ModelUploadType.Zip:
         checkZipFile('binary', files.binary)
         checkZipFile('code', files.code)
+        checkSeldonVersion(metadata.buildOptions.seldonVersion)
         break
       case ModelUploadType.Docker:
         checkTarFile('docker', files.docker)
@@ -115,6 +123,7 @@ export const postUpload = [
     let mode: UploadModes
 
     const prop = typeof req.query.mode === 'string' ? getPropertyFromEnumValue(UploadModes, req.query.mode) : undefined
+
     if (!req.query.mode) {
       mode = UploadModes.NewModel
     } else if (prop) {
@@ -146,9 +155,6 @@ export const postUpload = [
 
         versions: [],
         currentMetadata: metadata,
-        parent: undefined,
-
-        owner: req.user._id,
       })
     }
 

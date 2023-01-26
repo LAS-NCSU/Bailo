@@ -142,6 +142,7 @@ function ApprovalList({ type, category }: { type: RequestType; category: ReviewF
                   </Link>
                   <Stack direction='row' spacing={2}>
                     <Chip color='primary' label={requestObj.approvalType} size='small' />
+                    <Chip color='primary' label={`Version: ${requestObj.version?.version}`} size='small' />
                     <Box sx={{ mt: 'auto !important', mb: 'auto !important' }}>
                       <Typography variant='body1'>
                         {requestObj.version?.metadata?.highLevelDetails?.modelInASentence}
@@ -206,7 +207,9 @@ function ApprovalList({ type, category }: { type: RequestType; category: ReviewF
                 <Button
                   variant='contained'
                   onClick={() => changeState('Accepted', requestObj)}
-                  data-test='approveButton'
+                  data-test={`approveButton${requestObj.approvalType}${
+                    type === 'Upload' ? requestObj.version?.model?.uuid : requestObj.deployment?.uuid
+                  }`}
                   disabled={requestObj.status === 'Accepted'}
                 >
                   Approve

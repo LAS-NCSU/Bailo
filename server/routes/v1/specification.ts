@@ -114,7 +114,7 @@ function getModelDefinition(populated: boolean) {
 
   return {
     type: 'object',
-    required: ['schemaRef', 'uuid', 'parent', 'versions', 'currentMetadata', 'owner', 'createdAt', 'updatedAt'],
+    required: ['schemaRef', 'uuid', 'parent', 'versions', 'currentMetadata', 'createdAt', 'updatedAt'],
     properties: {
       schemaRef: {
         type: 'string',
@@ -124,8 +124,6 @@ function getModelDefinition(populated: boolean) {
         type: 'string',
         example: 'fasttext-language-identification-30v93x',
       },
-
-      parent: getModelDefinition(false),
       versions: {
         type: 'array',
         items: getVersionDefinition(false),
@@ -149,8 +147,6 @@ function getModelDefinition(populated: boolean) {
           timeStamp: '2022-07-03T20:52:59.176Z',
         },
       },
-
-      owner: getUserDefinition(false),
 
       createdAt: {
         type: 'string',
@@ -367,7 +363,7 @@ function getDeploymentDefinition(populated: boolean) {
 
   return {
     type: 'object',
-    required: ['schemaRef', 'uuid', 'parent', 'versions', 'currentMetadata', 'owner', 'createdAt', 'updatedAt'],
+    required: ['schemaRef', 'uuid', 'parent', 'versions', 'currentMetadata', 'createdAt', 'updatedAt'],
     properties: {
       schemaRef: {
         type: 'string',
@@ -432,9 +428,6 @@ function getDeploymentDefinition(populated: boolean) {
       built: {
         type: 'boolean',
       },
-
-      owner: getUserDefinition(false),
-
       createdAt: {
         type: 'string',
         format: 'date-time',
@@ -1051,6 +1044,25 @@ function generateSpecification() {
             },
           },
         },
+        delete: {
+          tags: ['version'],
+          description:
+            "Delete a specific version by it's internal ID. This will also delete any associated requests, and also any model/deployment documents depending on how many versions are left.",
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              description: 'ID of version to delete.',
+              type: 'string',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'ID of the deleted version.',
+              type: 'string',
+            },
+          },
+        },
       },
       '/version/{id}/reset-approvals': {
         post: {
@@ -1096,6 +1108,39 @@ function generateSpecification() {
                 items: {
                   $ref: '#/definitions/Schema',
                 },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ['schema'],
+          description: 'Upload a new schema',
+          parameters: [
+            {
+              name: 'schema',
+              in: 'body',
+              description: 'Schema metadata',
+              required: true,
+              type: 'object',
+              default: {
+                name: '',
+                reference: '',
+                schema: {},
+                use: 'UPLOAD',
+              },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'The name of the submitted schema.',
+              schema: {
+                type: 'string',
+              },
+            },
+            '409': {
+              description: 'Duplicated name or reference.',
+              schema: {
+                type: 'string',
               },
             },
           },

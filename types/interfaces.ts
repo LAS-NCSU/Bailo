@@ -59,12 +59,9 @@ export interface Model {
   schemaRef: string
   uuid: string
 
-  parent: Types.ObjectId | undefined
   versions: Array<Types.ObjectId>
 
   currentMetadata: ModelMetadata
-
-  owner: Types.ObjectId
 }
 
 export interface LogStatement {
@@ -73,7 +70,12 @@ export interface LogStatement {
   msg: string
 }
 
-export type SchemaType = 'UPLOAD' | 'DEPLOYMENT'
+export enum SchemaTypes {
+  UPLOAD = 'UPLOAD',
+  DEPLOYMENT = 'DEPLOYMENT',
+}
+
+export type SchemaType = SchemaTypes.UPLOAD | SchemaTypes.DEPLOYMENT
 
 export interface Schema {
   name: string
@@ -108,6 +110,17 @@ export interface UiConfig {
     showWarning: boolean
     checkboxText: string
   }
+
+  development: {
+    logUrl: string
+  }
+
+  seldonVersions: Array<SeldonVersion>
+}
+
+export type SeldonVersion = {
+  name: string
+  image: string
 }
 
 export type RequestType = 'Upload' | 'Deployment'
@@ -187,3 +200,73 @@ export enum UploadModes {
 // Dates are in ISO 8601 format
 enum DateStringBrand {}
 export type DateString = string & DateStringBrand
+
+export enum EntityKind {
+  USER = 'user',
+}
+
+export interface Entity {
+  kind: EntityKind
+  id: string
+}
+
+export interface ParsedEntity {
+  kind: EntityKind
+  entity: UserDoc
+}
+
+export enum LogLevel {
+  TRACE = 10,
+  DEBUG = 20,
+  INFO = 30,
+  WARN = 40,
+  ERROR = 50,
+  FATAL = 60,
+}
+
+export enum LogLevelLabel {
+  TRACE = 'trace',
+  DEBUG = 'debug',
+  INFO = 'info',
+  WARN = 'warn',
+  ERROR = 'error',
+  FATAL = 'fatal',
+}
+
+export interface LogEntry {
+  _id: string
+  name: string
+  hostname: string
+  pid: number
+
+  level: LogLevel
+
+  msg: string
+
+  time: string
+
+  src?: {
+    file: string
+    line: number
+  }
+
+  [x: string]: unknown
+}
+
+export enum LogType {
+  Build = 'build',
+  Request = 'request',
+  Misc = 'misc',
+}
+
+export type SchemaQuestion = {
+  reference: string
+  title: string
+  description: string
+  type: string
+  format?: string
+  minLength?: number
+  maxLength?: number
+  widget?: string
+  readOnly?: boolean
+}

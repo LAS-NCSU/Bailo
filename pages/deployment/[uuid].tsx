@@ -181,7 +181,7 @@ export default function Deployment() {
   if (isUiConfigLoading || !uiConfig) return Loading
   if (isCurrentUserLoading || !currentUser) return Loading
 
-  const deploymentTag = `${uiConfig?.registry.host}/${deployment.metadata.contacts.requester}/${tag}`
+  const deploymentTag = `${uiConfig?.registry.host}/${deployment.uuid}/${tag}`
 
   const requestApprovalReset = async () => {
     const response = await postEndpoint(`/api/v1/deployment/${deployment?.uuid}/reset-approvals`, {})
@@ -207,24 +207,25 @@ export default function Deployment() {
             >
               Back to model
             </Button>
-            {hasUploadType && initialVersionRequested?.metadata.buildOptions.uploadType === ModelUploadType.ModelCard && (
-              <Box>
-                <Alert
-                  severity='info'
-                  sx={{
-                    width: 'fit-content',
-                    m: 'auto',
-                    backgroundColor: '#0288d1',
-                    color: '#fff',
-                    '& .MuiAlert-icon': {
+            {hasUploadType &&
+              initialVersionRequested?.metadata.buildOptions.uploadType === ModelUploadType.ModelCard && (
+                <Box>
+                  <Alert
+                    severity='info'
+                    sx={{
+                      width: 'fit-content',
+                      m: 'auto',
+                      backgroundColor: '#0288d1',
                       color: '#fff',
-                    },
-                  }}
-                >
-                  This model version was uploaded as just a model card
-                </Alert>
-              </Box>
-            )}
+                      '& .MuiAlert-icon': {
+                        color: '#fff',
+                      },
+                    }}
+                  >
+                    This model version was uploaded as just a model card
+                  </Alert>
+                </Box>
+              )}
             {hasUploadType && initialVersionRequested?.metadata.buildOptions.uploadType === ModelUploadType.Docker && (
               <Box>
                 <Alert
@@ -262,7 +263,7 @@ export default function Deployment() {
         <Paper sx={{ p: 3 }}>
           <Stack direction='row' spacing={2}>
             <ApprovalsChip
-              approvals={[{ reviewer: deployment.metadata.contacts.manager, status: deployment.managerApproved }]}
+              approvals={[{ reviewers: deployment.metadata.contacts.owner, status: deployment.managerApproved }]}
             />
             <Divider orientation='vertical' flexItem />
             <Button
@@ -283,7 +284,7 @@ export default function Deployment() {
               <DisabledElementTooltip
                 conditions={[
                   deployment?.managerApproved === 'No Response'
-                    ? 'Deployment needs to be approved before it can have its approvals reset.'
+                    ? 'Deployment needs to have been responded to before it can have its approvals reset.'
                     : '',
                 ]}
               >
@@ -371,9 +372,9 @@ export default function Deployment() {
                 <Link href='/settings' passHref>
                   <MuiLink sx={{ ml: 0.5, mr: 0.5, color: theme.palette.secondary.main }}>settings</MuiLink>
                 </Link>
-                page) {theme.palette.mode}
+                page)
               </p>
-              <CodeLine line={`docker login ${uiConfig.registry.host} -u ${deployment.metadata.contacts.requester}`} />
+              <CodeLine line={`docker login ${uiConfig.registry.host} -u ${currentUser.id}`} />
               <br />
 
               <p style={{ margin: 0 }}># Pull model</p>
@@ -381,15 +382,14 @@ export default function Deployment() {
               <br />
 
               <p style={{ margin: 0 }}># Run Docker image</p>
-              <CodeLine line={`docker run -p 9999:9000 ${deploymentTag}`} />
-              <p style={{ margin: 0 }}># (the container exposes on port 9000, available on the host as port 9999)</p>
+              <CodeLine line={`docker run -p 9000 ${deploymentTag}`} />
               <br />
 
               <p style={{ margin: 0 }}># Check that the Docker container is running</p>
               <CodeLine line='docker ps' />
               <br />
 
-              <p style={{ margin: 0 }}># The model is accessible at localhost:9999</p>
+              <p style={{ margin: 0 }}># The model is accessible at localhost:9000</p>
             </Box>
           </DialogContentText>
         </DialogContent>
