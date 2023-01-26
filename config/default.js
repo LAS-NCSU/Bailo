@@ -35,7 +35,7 @@ module.exports = {
 
   s2i: {
     path: '/s2i/s2i',
-    builderImage: 'seldonio/seldon-core-s2i-python37:1.10.0',
+    builderImage: 'seldonio/seldon-core-s2i-python37:1.15.0',
   },
 
   build: {
@@ -82,8 +82,16 @@ module.exports = {
     },
     seldonVersions: [
       {
-        name: 'seldonio - 1.10.0',
+        name: 'seldonio python 3.7 - 1.10.0',
         image: 'seldonio/seldon-core-s2i-python37:1.10.0',
+      },
+      {
+        name: 'seldonio python3.7 - 1.15.0',
+        image: 'seldonio/seldon-core-s2i-python37:1.15.0',
+      },
+      {
+        name: 'seldonio python3.8 - 1.15.0',
+        image: 'seldonio/seldon-core-s2i-python3:1.15.0',
       },
     ],
   },
