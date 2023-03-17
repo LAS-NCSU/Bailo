@@ -7,9 +7,9 @@ from glob import glob
 from bailoclient.config import APIConfig, BailoConfig, Pkcs12Config
 from json import JSONDecodeError
 
-from ..bailoclient.api import AuthorisedAPI
-from ..bailoclient.auth import NullAuthenticator, Pkcs12Authenticator
-from ..bailoclient.utils.exceptions import (
+from bailoclient.api import AuthorisedAPI
+from bailoclient.auth import NullAuthenticator, Pkcs12Authenticator
+from bailoclient.utils.exceptions import (
     NoServerResponseMessage,
     UnauthorizedException,
 )
@@ -19,7 +19,6 @@ MINIMAL_MODEL_PATH = os.getenv("MINIMAL_MODEL_PATH")
 
 @pytest.fixture
 def authorised_api():
-
     api_config = APIConfig(url=os.environ["BAILO_URL"], ca_verify=False)
 
     config = BailoConfig(api=api_config)
@@ -34,7 +33,6 @@ def authorised_api():
 
 @pytest.fixture
 def pki_authorised_api():
-
     api_config = APIConfig(url=os.environ["BAILO_URL"], ca_verify=False)
 
     pki_config = Pkcs12Config(pkcs12_filename="filename", pkcs12_password="password")
@@ -129,7 +127,6 @@ def test_handle_response_calls_decode_file_content_if_an_output_dir_is_provided(
     return_value=MockResponse({"result": "success"}, 200),
 )
 def test_get_calls_requests_get_if_not_pki_auth(mock_get, authorised_api):
-
     authorised_api.get("/test/url")
 
     mock_get.assert_called_once_with(
@@ -250,3 +247,16 @@ def test_decode_file_content_downloads_file_to_output_dir_from_byte_stream(
     authorised_api._AuthorisedAPI__decode_file_content(data, tmpdir)
 
     assert glob(f"{tmpdir}/model.bin")
+
+
+def test_decode_file_content_removes_macosx_folder_if_present(authorised_api, tmpdir):
+    with open(f"{MINIMAL_MODEL_PATH}/minimal_binary.zip", "rb") as zipfile:
+        data = zipfile.read()
+
+    os.makedirs(os.path.join(tmpdir, "__MACOSX"))
+
+    assert glob(os.path.join(tmpdir, "__MACOSX"))
+
+    authorised_api._AuthorisedAPI__decode_file_content(data, tmpdir)
+
+    assert not glob(os.path.join(tmpdir, "__MACOSX"))

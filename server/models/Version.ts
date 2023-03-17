@@ -1,7 +1,7 @@
 import { Document, IndexOptions, model, Schema, Types } from 'mongoose'
 import MongooseDelete from 'mongoose-delete'
 import { LogStatement } from './Deployment'
-import { approvalStateOptions, ApprovalStates, DateString } from '../../types/interfaces'
+import { approvalStateOptions, ApprovalStates, DateString, MinimalEntry, ModelMetadata } from '../../types/interfaces'
 import { ModelDoc } from './Model'
 import logger from '../utils/logger'
 
@@ -9,17 +9,26 @@ export interface Version {
   model: ModelDoc | Types.ObjectId
   version: string
 
-  metadata: any
+  metadata: ModelMetadata
 
   built: boolean
   managerApproved: ApprovalStates
   reviewerApproved: ApprovalStates
+
   managerLastViewed: DateString
   reviewerLastViewed: DateString
 
   files: {
     rawBinaryPath?: string
+    binary?: {
+      fileList?: Array<MinimalEntry>
+    }
+
     rawCodePath?: string
+    code?: {
+      fileList?: Array<MinimalEntry>
+    }
+
     rawDockerPath?: string
   }
 

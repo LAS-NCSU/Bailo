@@ -1,15 +1,24 @@
 import bodyParser from 'body-parser'
 import config from 'config'
+import { basename } from 'path'
 import { Request, Response } from 'express'
-import RequestModel, { ApprovalTypes } from '../../models/Request'
+import { getClient } from '../../utils/minio'
+import { MinioRandomAccessReader, getFileStream } from '../../utils/zip'
+import ApprovalModel, { ApprovalTypes } from '../../models/Approval'
 import { ApprovalStates, ModelUploadType, SeldonVersion } from '../../../types/interfaces'
-import { createVersionRequests, deleteRequestsByVersion } from '../../services/request'
-import { findVersionById, updateManagerLastViewed, updateReviewerLastViewed } from '../../services/version'
+import { createVersionApprovals, deleteApprovalsByVersion } from '../../services/approval'
+import {
+  findVersionById,
+  findVersionFileList,
+  updateManagerLastViewed,
+  updateReviewerLastViewed,
+} from '../../services/version'
 import { BadReq, Forbidden, NotFound } from '../../utils/result'
 import { ensureUserRole } from '../../utils/user'
 import { isUserInEntityList, parseEntityList } from '../../utils/entity'
 import { removeVersionFromModel } from '../../services/model'
-import { deleteDeploymentsByVersion } from '../../services/deployment'
+import { FileRef } from '../../utils/build/build'
+import { getUploadQueue } from '../../utils/queues'
 
 export const getVersion = [
   ensureUserRole('user'),
@@ -26,6 +35,74 @@ export const getVersion = [
 
     req.log.info({ code: 'fetching_version', version }, 'User fetching version')
     return res.json(version)
+  },
+]
+
+export const getVersionFileList = [
+  ensureUserRole('user'),
+  async (req: Request, res: Response) => {
+    const { id, file } = req.params
+
+    if (file !== 'code') {
+      throw BadReq({ file }, 'Only code listing is supported.')
+    }
+
+    const version = await findVersionById(req.user, id, { showFiles: true })
+
+    if (!version) {
+      throw NotFound({ code: 'version_not_found', versionId: id }, 'Unable to find version')
+    }
+
+    const fileList = await findVersionFileList(version)
+
+    return res.json({
+      fileList,
+    })
+  },
+]
+
+export const getVersionFile = [
+  ensureUserRole('user'),
+  async (req: Request, res: Response) => {
+    const { id, file } = req.params
+    const { path } = req.query
+
+    if (typeof path !== 'string') {
+      throw BadReq({ path }, 'Path should be of type string.')
+    }
+
+    if (file !== 'code') {
+      throw BadReq({ file }, 'Only code listing is supported.')
+    }
+
+    const version = await findVersionById(req.user, id, { showFiles: true })
+
+    if (!version) {
+      throw NotFound({ code: 'version_not_found', versionId: id }, 'Unable to find version')
+    }
+
+    if (!version.files.rawCodePath) {
+      throw NotFound({ code: 'version_not_found', versionId: id }, 'Unable to find version code path')
+    }
+
+    const fileList = await findVersionFileList(version)
+    const entry = fileList.find((item) => item.fileName === path)
+
+    if (!entry) {
+      throw NotFound({ code: 'version_not_found', versionId: id, path }, 'Unable to find version file')
+    }
+
+    const fileRef: FileRef = {
+      bucket: config.get('minio.uploadBucket'),
+      path: version.files.rawCodePath,
+      name: basename(path),
+    }
+
+    const minio = getClient()
+    const reader = new MinioRandomAccessReader(minio, fileRef)
+    const stream = await getFileStream(reader, entry)
+
+    stream.pipe(res)
   },
 ]
 
@@ -81,9 +158,9 @@ export const putVersion = [
       throw BadReq({ reviewers: version.metadata.contacts.reviewer }, `Invalid reviewer: '${reviewers.reason}'`)
     }
 
-    await RequestModel.deleteMany({
+    await ApprovalModel.deleteMany({
       version: version._id,
-      request: 'Upload',
+      approvalCategory: 'Upload',
       $or: [
         {
           approvalType: ApprovalTypes.Manager,
@@ -99,7 +176,7 @@ export const putVersion = [
       ],
     })
 
-    await createVersionRequests({ version })
+    await createVersionApprovals({ version, user: req.user })
 
     version.managerApproved = ApprovalStates.NoResponse
     version.reviewerApproved = ApprovalStates.NoResponse
@@ -117,19 +194,84 @@ export const postResetVersionApprovals = [
     const { user } = req
     const version = await findVersionById(req.user, id, { populate: true })
     if (!version) {
-      throw BadReq({ code: 'version_not_found' }, 'Unable to find requested version')
+      throw BadReq({ code: 'version_not_found', version: id }, 'Unable to find requested version')
     }
 
     if (!(await isUserInEntityList(user, version.metadata.contacts.uploader))) {
-      throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to do this operation.')
+      throw Forbidden(
+        { code: 'user_unauthorised', version: version._id },
+        'User is not authorised to do this operation.'
+      )
     }
     version.managerApproved = ApprovalStates.NoResponse
     version.reviewerApproved = ApprovalStates.NoResponse
     await version.save()
-    await createVersionRequests({ version })
+    await createVersionApprovals({ version, user: req.user })
 
-    req.log.info({ code: 'version_approvals_reset', version }, 'User reset version approvals')
+    req.log.info({ code: 'version_approvals_reset', version: version._id }, 'User reset version approvals')
     return res.json(version)
+  },
+]
+
+export const postRebuildModel = [
+  ensureUserRole('user'),
+  async (req: Request, res: Response) => {
+    const { id } = req.params
+    const { user } = req
+    const version = await findVersionById(req.user, id, { populate: true })
+    if (!version) {
+      throw BadReq({ code: 'version_not_found', version: id }, 'Unable to find requested version')
+    }
+
+    if (!(await isUserInEntityList(user, version.metadata.contacts.uploader))) {
+      throw Forbidden(
+        { code: 'user_unauthorised', version: version._id },
+        'User is not authorised to do this operation.'
+      )
+    }
+
+    if (version.metadata?.buildOptions?.uploadType !== ModelUploadType.Zip) {
+      throw BadReq({ version: version._id }, 'Unable to rebuild a model that was not uploaded as a binary file')
+    }
+
+    if (version.state.build.state === 'retrying') {
+      throw BadReq({ version: version._id }, 'This model is already being rebuilt automatically.')
+    }
+
+    const binaryRef = {
+      name: 'binary.zip',
+      bucket: config.get('minio.uploadBucket'),
+      path: version.files.rawBinaryPath,
+    }
+
+    const codeRef = {
+      name: 'code.zip',
+      bucket: config.get('minio.uploadBucket'),
+      path: version.files.rawCodePath,
+    }
+
+    const jobId = await (
+      await getUploadQueue()
+    ).add({
+      versionId: version._id,
+      userId: req.user._id,
+      binary: binaryRef,
+      code: codeRef,
+      uploadType: ModelUploadType.Zip,
+    })
+
+    version.state.build = {
+      ...(version.state.build || {}),
+      state: 'retrying',
+    }
+    version.markModified('state')
+    await version.save()
+
+    const message = 'Successfully created build job in upload queue'
+    req.log.info({ code: 'created_upload_job', jobId, version: version._id }, message)
+    return res.json({
+      message,
+    })
   },
 ]
 
@@ -191,11 +333,7 @@ export const deleteVersion = [
       throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to do this operation.')
     }
 
-    await Promise.all([
-      deleteRequestsByVersion(user, version),
-      deleteDeploymentsByVersion(user, version),
-      removeVersionFromModel(user, version),
-    ])
+    await Promise.all([deleteApprovalsByVersion(user, version), removeVersionFromModel(user, version)])
 
     await version.delete(user._id)
 

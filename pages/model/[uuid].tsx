@@ -6,6 +6,7 @@ import UpArrow from '@mui/icons-material/KeyboardArrowUpTwoTone'
 import PostAddIcon from '@mui/icons-material/PostAddTwoTone'
 import RestartAlt from '@mui/icons-material/RestartAltTwoTone'
 import UploadIcon from '@mui/icons-material/UploadTwoTone'
+import ReplayIcon from '@mui/icons-material/Replay'
 import MuiAlert, { AlertProps } from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -37,12 +38,16 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import React, { MouseEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Elements } from 'react-flow-renderer'
+import { Node, Edge } from 'reactflow'
 import UserAvatar from 'src/common/UserAvatar'
 import ModelOverview from 'src/ModelOverview'
 import TerminalLog from 'src/TerminalLog'
 import Wrapper from 'src/Wrapper'
 import createComplianceFlow from 'utils/complianceFlow'
+import CodeExplorer from 'src/model/CodeExplorer'
+import Dialog from '@mui/material/Dialog'
+import DialogContent from '@mui/material/DialogContent'
+import TextField from '@mui/material/TextField'
 import { getErrorMessage } from '../../utils/fetcher'
 import ApprovalsChip from '../../src/common/ApprovalsChip'
 import EmptyBlob from '../../src/common/EmptyBlob'
@@ -54,10 +59,10 @@ import useNotification from '../../src/common/Snackbar'
 
 const ComplianceFlow = dynamic(() => import('../../src/ComplianceFlow'))
 
-type TabOptions = 'overview' | 'compliance' | 'build' | 'deployments' | 'settings'
+type TabOptions = 'overview' | 'compliance' | 'build' | 'deployments' | 'code' | 'settings'
 
 function isTabOption(value: string): value is TabOptions {
-  return ['overview', 'compliance', 'build', 'deployments', 'settings'].includes(value)
+  return ['overview', 'compliance', 'build', 'deployments', 'code', 'settings'].includes(value)
 }
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>((props, ref) => (
@@ -69,28 +74,29 @@ function Model() {
   const theme = useTheme()
   const { uuid, tab, version: versionParameter }: { uuid?: string; tab?: TabOptions; version?: string } = router.query
 
-  const deploymentVersionsDisplayLimit = 5
-
   const [group, setGroup] = useState<TabOptions>('overview')
   const [selectedVersion, setSelectedVersion] = useState<string | undefined>(undefined)
   const [anchorEl, setAnchorEl] = useState<HTMLDivElement | null>(null)
   const [modelFavourited, setModelFavourited] = useState<boolean>(false)
   const [favouriteButtonDisabled, setFavouriteButtonDisabled] = useState<boolean>(false)
   const open = Boolean(anchorEl)
-  const [complianceFlow, setComplianceFlow] = useState<Elements>([])
+  const [complianceFlow, setComplianceFlow] = useState<{ edges: Edge[]; nodes: Node[] }>({ edges: [], nodes: [] })
   const [showLastViewedWarning, setShowLastViewedWarning] = useState(false)
   const [managerLastViewed, setManagerLastViewed] = useState<DateString | undefined>()
   const [reviewerLastViewed, setReviewerLastViewed] = useState<DateString | undefined>()
   const [isManager, setIsManager] = useState(false)
   const [isReviewer, setIsReviewer] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteModelErrorMessage, setDeleteModelErrorMessage] = useState('')
+  const [ungovernedDialogOpen, setUngovernedDialogOpen] = useState(false)
+  const [ungovernedDeploymentName, setUngovernedDeploymentName] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const { currentUser, isCurrentUserLoading, mutateCurrentUser, isCurrentUserError } = useGetCurrentUser()
   const { versions, isVersionsLoading, isVersionsError } = useGetModelVersions(uuid)
   const { version, isVersionLoading, isVersionError, mutateVersion } = useGetModelVersion(uuid, selectedVersion, true)
   const { deployments, isDeploymentsLoading, isDeploymentsError } = useGetModelDeployments(uuid)
   const { versionAccess } = useGetVersionAccess(version?._id)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteModelErrorMessage, setDeleteModelErrorMessage] = useState('')
 
   const hasUploadType = useMemo(() => version !== undefined && !!version.metadata.buildOptions?.uploadType, [version])
   const sendNotification = useNotification()
@@ -98,6 +104,17 @@ function Model() {
   // isPotentialUploader stores whether an uploader could plausibly have access to privileged functions.
   // It defaults to true, until it hears false from the network access check.
   const isPotentialUploader = useMemo(() => versionAccess?.uploader !== false, [versionAccess])
+
+  const onRebuildModelClick = useCallback(async () => {
+    const response = await postEndpoint(`/api/v1/version/${version?._id}/rebuild`, {})
+
+    if (response.ok) {
+      sendNotification({ variant: 'success', msg: 'Requested model rebuild' })
+      mutateVersion()
+    } else {
+      sendNotification({ variant: 'error', msg: await getErrorMessage(response) })
+    }
+  }, [sendNotification, version, mutateVersion])
 
   const addQueryParameter = (key: string, value: string) => {
     const routerParameters = router.query
@@ -272,9 +289,37 @@ function Model() {
     }
   }
 
+  const handleUngovernedDialogClose = () => {
+    setUngovernedDialogOpen(false)
+  }
+
+  const requestUngovernedDeployment = async () => {
+    setErrorMessage('')
+    const response = await postEndpoint(`/api/v1/deployment/ungoverned`, {
+      name: ungovernedDeploymentName,
+      modelUuid: uuid,
+      initialVersionRequested: version.version,
+    })
+    if (response.status >= 400) {
+      let responseError = response.statusText
+      try {
+        responseError = `${response.statusText}: ${(await response.json()).message}`
+      } catch (e) {
+        setErrorMessage('No response from server')
+        return
+      }
+
+      setErrorMessage(responseError)
+      return
+    }
+
+    const { uuid: responseUuid } = await response.json()
+    router.push(`/deployment/${responseUuid}`)
+  }
+
   return (
     <Wrapper title={`Model: ${version.metadata.highLevelDetails.name}`} page='model'>
-      {hasUploadType && version.metadata.buildOptions.uploadType === ModelUploadType.ModelCard && (
+      {hasUploadType && version.metadata?.buildOptions?.uploadType === ModelUploadType.ModelCard && (
         <Box sx={{ pb: 2 }}>
           <Alert severity='info' sx={{ width: 'fit-content', m: 'auto' }} data-test='modelCardPageAlert'>
             This model version was uploaded as just a model card
@@ -338,6 +383,18 @@ function Model() {
                       <UploadIcon fontSize='small' />
                     </ListItemIcon>
                     <ListItemText>Request deployment</ListItemText>
+                  </MenuItem>
+                </DisabledElementTooltip>
+                <DisabledElementTooltip conditions={[!version.built ? 'Version needs to build.' : '']}>
+                  <MenuItem
+                    onClick={() => setUngovernedDialogOpen(true)}
+                    disabled={!version.built}
+                    data-test='submitUngovernedDeployment'
+                  >
+                    <ListItemIcon>
+                      <UploadIcon fontSize='small' />
+                    </ListItemIcon>
+                    <ListItemText>Request ungoverned deployment</ListItemText>
                   </MenuItem>
                 </DisabledElementTooltip>
                 <Divider />
@@ -442,10 +499,15 @@ function Model() {
             <Tab
               label='Build Logs'
               value='build'
-              disabled={hasUploadType && version.metadata.buildOptions.uploadType === ModelUploadType.ModelCard}
+              disabled={hasUploadType && version.metadata?.buildOptions?.uploadType === ModelUploadType.ModelCard}
               data-test='buildLogsTab'
             />
             <Tab label='Deployments' value='deployments' />
+            <Tab
+              label='Explore Code'
+              value='code'
+              disabled={hasUploadType && version.metadata?.buildOptions?.uploadType !== ModelUploadType.Zip}
+            />
             <Tab label='Settings' value='settings' data-test='settingsTab' />
           </Tabs>
         </Box>
@@ -467,9 +529,29 @@ function Model() {
           </>
         )}
 
-        {group === 'compliance' && <ComplianceFlow initialElements={complianceFlow} />}
+        {group === 'compliance' && (
+          <ComplianceFlow initialEdges={complianceFlow.edges} initialNodes={complianceFlow.nodes} />
+        )}
 
-        {group === 'build' && <TerminalLog logs={version.logs} title='Model Build Logs' />}
+        {group === 'build' && (
+          <>
+            <Grid container justifyContent='flex-end' sx={{ pb: 2 }}>
+              <DisabledElementTooltip
+                conditions={[version.state?.build?.state === 'retrying' ? 'Model is already retrying.' : '']}
+              >
+                <Button
+                  disabled={version.state?.build?.state === 'retrying'}
+                  onClick={onRebuildModelClick}
+                  variant='outlined'
+                  startIcon={<ReplayIcon />}
+                >
+                  Rebuild Model
+                </Button>
+              </DisabledElementTooltip>
+            </Grid>
+            <TerminalLog logs={version.logs} title='Model Build Logs' />
+          </>
+        )}
 
         {group === 'deployments' && (
           <>
@@ -501,33 +583,13 @@ function Model() {
                   </Stack>
                 </Box>
 
-                <Box sx={{ mb: 1 }}>
-                  <Stack direction='row'>
-                    <Typography variant='subtitle2' sx={{ mt: 'auto', mb: 'auto', mr: 1 }}>
-                      Associated versions:
-                    </Typography>
-                    {deployment.versions.length > 0 &&
-                      versions
-                        .filter((deploymentVersion) => deployment.versions.includes(deploymentVersion._id))
-                        .slice(0, deploymentVersionsDisplayLimit)
-                        .map((filteredVersion) => (
-                          <Chip color='primary' key={filteredVersion.version} label={filteredVersion.version} />
-                        ))}
-                    {deployment.versions.length > 3 && (
-                      <Typography sx={{ mt: 'auto', mb: 'auto' }}>{`...plus ${
-                        versions.filter((deploymentVersionForLimit) =>
-                          deployment.versions.includes(deploymentVersionForLimit._id)
-                        ).length - deploymentVersionsDisplayLimit
-                      } more`}</Typography>
-                    )}
-                  </Stack>
-                </Box>
-
                 <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: 1 }} />
               </Box>
             ))}
           </>
         )}
+
+        {group === 'code' && <CodeExplorer id={version._id} addQueryParameter={addQueryParameter} />}
 
         {group === 'settings' && (
           <Box data-test='modelSettingsPage'>
@@ -574,6 +636,31 @@ function Model() {
           </Box>
         )}
       </Paper>
+      <Dialog open={ungovernedDialogOpen} onClose={handleUngovernedDialogClose}>
+        <DialogContent>
+          <Stack spacing={1}>
+            <Stack direction='row' spacing={2}>
+              <TextField
+                label='Deployment name'
+                variant='outlined'
+                value={ungovernedDeploymentName}
+                onChange={(event) => setUngovernedDeploymentName(event.target.value)}
+              />
+              <Button
+                disabled={ungovernedDeploymentName === ''}
+                variant='contained'
+                onClick={requestUngovernedDeployment}
+                autoFocus
+              >
+                Request
+              </Button>
+            </Stack>
+            <Typography sx={{ color: theme.palette.error.main }} variant='caption'>
+              {errorMessage}
+            </Typography>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Wrapper>
   )
 }

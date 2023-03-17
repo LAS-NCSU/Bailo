@@ -2,6 +2,7 @@ import json
 import os
 import re
 from unittest.mock import Mock, patch
+from pkg_resources import resource_filename
 
 import pytest
 from bailoclient.client import Client
@@ -35,7 +36,6 @@ def mock_client():
 
 @patch("bailoclient.client.Client.get_model_schema")
 def test_get_model_schema(mock_get_model_schema, mock_client):
-
     mock_get_model_schema.return_value = {"response": "this is a thing"}
 
     model_uuid = "xyz"
@@ -49,7 +49,6 @@ def test_get_model_schema(mock_get_model_schema, mock_client):
 def test_get_user_by_name_returns_user_object_with_matching_name(
     mock_get_users, mock_client
 ):
-
     mock_get_users.return_value = [User({"id": "user"})]
 
     user = mock_client.get_user_by_name("user")
@@ -61,7 +60,6 @@ def test_get_user_by_name_returns_user_object_with_matching_name(
 def test_get_user_by_name_returns_None_if_no_matching_users(
     mock_get_users, mock_client
 ):
-
     mock_get_users.return_value = [User({"id": "user"})]
 
     user = mock_client.get_user_by_name("test")
@@ -96,7 +94,6 @@ def test_get_model_card_gets_model_if_no_version_provided(mock_model, mock_clien
 def test_validate_model_card_raises_error_if_model_card_is_invalid(
     mock_validate, mock_client
 ):
-
     validation_errors = [ValidationError("field", "message")]
     mock_validate.return_value = ValidationResult(validation_errors)
 
@@ -148,26 +145,8 @@ def test_validate_filepaths_raises_error_if_a_directory_is_uploaded(mock_client)
         InvalidFilePath,
         match=re.escape("../../cypress/fixtures is a directory"),
     ):
-
         mock_client._Client__validate_file_paths(
             "../../cypress/fixtures",
-        )
-
-
-@patch("bailoclient.client.Client._too_large_for_gateway", return_value=True)
-def test_generate_payload_raises_error_if_payload_too_large_and_aws_gateway(
-    mock_gateway, mock_client
-):
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "Payload too large; JWT Auth running through AWS Gateway (10M limit)"
-        ),
-    ):
-        mock_client._generate_payload(
-            metadata=json.dumps({"schema": "value"}),
-            binary_file="../../cypress/fixtures/minimal_binary.zip",
-            code_file="../../cypress/fixtures/minimal_code.zip",
         )
 
 
@@ -187,7 +166,6 @@ def test_add_files_to_payload_adds_code_and_binary_files(mock_client):
 
 
 def test_post_model_raises_error_if_invalid_mode_given(mock_client):
-
     with pytest.raises(
         ValueError,
         match=re.escape("Invalid mode - must be either newVersion or newModel"),
@@ -219,59 +197,128 @@ def test_increment_model_version_raises_error_if_unable_to_increase_version_by_o
 
 
 @patch("bailoclient.client.Client._generate_payload")
-@patch("bailoclient.client.Client._increment_model_version")
+@patch("bailoclient.client.Client._validate_uploads")
+@patch("bailoclient.client.Client._too_large_for_gateway", return_value=False)
+@patch("bailoclient.client.Client._post_model")
 def test_update_model_is_called_with_expected_params(
-    mock_increment_version, mock_generate_payload, mock_client
+    mock_post_model,
+    mock_gateway,
+    mock_validate_uploads,
+    mock_generate_payload,
+    mock_client,
 ):
-
-    payload = Mock({"payload": "data"}, content_type="content")
     mode = "newVersion"
-    model_uuid = "model"
+    model_uuid = "model_abc"
+    binary_file = "../../cypress/fixtures/minimal_binary.zip"
+    code_file = "../../cypress/fixtures/minimal_code.zip"
+    metadata = {"highLevelDetails": {"modelCardVersion": "2"}}
+    metadata_json = json.dumps(metadata)
 
+    payload = Mock(metadata_json, content_type="content")
     mock_generate_payload.return_value = payload
-    mock_increment_version.return_value = "3"
-    mock_client.api.post = Mock(return_value={"uuid": model_uuid})
 
     mock_client.update_model(
-        model_card=Model(
-            uuid=model_uuid,
-            _schema={"key": "value"},
-            currentMetadata={"highLevelDetails": {"modelCardVersion": "2"}},
-        ),
-        binary_file="../../cypress/fixtures/minimal_binary.zip",
-        code_file="../../cypress/fixtures/minimal_code.zip",
+        metadata=metadata,
+        model_uuid=model_uuid,
+        binary_file=binary_file,
+        code_file=code_file,
     )
 
-    mock_client.api.post.assert_called_once_with(
-        f"/model?mode={mode}&modelUuid={model_uuid}",
-        request_body=payload,
-        headers={"Content-Type": payload.content_type},
+    mock_validate_uploads.assert_called_once_with(
+        binary_file=binary_file,
+        code_file=code_file,
+        metadata=metadata,
+        minimal_metadata_path=resource_filename(
+            "bailoclient", "resources/minimal_metadata.json"
+        ),
+    )
+
+    mock_generate_payload.assert_called_once_with(metadata_json, binary_file, code_file)
+
+    mock_post_model.assert_called_once_with(
+        model_data=payload, mode=mode, model_uuid=model_uuid
     )
 
 
 @patch("bailoclient.client.Client._generate_payload")
 @patch("bailoclient.client.Client._validate_uploads")
-def test_upload_model_is_called_with_expected_params(
-    mock_validate_uploads, mock_generate_payload, mock_client
+@patch("bailoclient.client.Client._too_large_for_gateway", return_value=True)
+def test_update_model_raises_exception_if_model_files_too_large(
+    mock_gateway, mock_validate, mock_generate_uploads, mock_client
 ):
+    with pytest.raises(ValueError):
+        model_uuid = "model_abc"
+        binary_file = "../../cypress/fixtures/minimal_binary.zip"
+        code_file = "../../cypress/fixtures/minimal_code.zip"
+        metadata = {"highLevelDetails": {"modelCardVersion": "2"}}
+
+        mock_client.update_model(
+            metadata=metadata,
+            model_uuid=model_uuid,
+            binary_file=binary_file,
+            code_file=code_file,
+        )
+
+
+@patch("bailoclient.client.Client._generate_payload")
+@patch("bailoclient.client.Client._validate_uploads")
+@patch("bailoclient.client.Client._too_large_for_gateway", return_value=False)
+@patch("bailoclient.client.Client._post_model")
+def test_upload_model_is_called_with_expected_params(
+    mock_post_model,
+    mock_gateway,
+    mock_validate_uploads,
+    mock_generate_payload,
+    mock_client,
+):
+    binary_file = "../../cypress/fixtures/minimal_binary.zip"
+    code_file = "../../cypress/fixtures/minimal_code.zip"
+    metadata = {"highLevelDetails": {"modelCardVersion": "2"}}
+    metadata_json = json.dumps(metadata)
 
     payload = Mock({"payload": "data"}, content_type="content")
-    model_uuid = "model"
 
     mock_generate_payload.return_value = payload
-    mock_client.api.post = Mock(return_value={"uuid": model_uuid})
 
     mock_client.upload_model(
-        metadata={"key": "value"},
-        binary_file="../../cypress/fixtures/minimal_binary.zip",
-        code_file="../../cypress/fixtures/minimal_code.zip",
+        metadata=metadata,
+        binary_file=binary_file,
+        code_file=code_file,
     )
 
-    mock_client.api.post.assert_called_once_with(
-        f"/model?mode=newModel",
-        request_body=payload,
-        headers={"Content-Type": payload.content_type},
+    mock_validate_uploads.assert_called_once_with(
+        binary_file=binary_file,
+        code_file=code_file,
+        metadata=metadata,
+        minimal_metadata_path=resource_filename(
+            "bailoclient", "resources/minimal_metadata.json"
+        ),
     )
+
+    mock_generate_payload.assert_called_once_with(metadata_json, binary_file, code_file)
+
+    mock_gateway.assert_called_once_with(payload, True)
+
+    mock_post_model.assert_called_once_with(payload)
+
+
+@patch("bailoclient.client.Client._generate_payload")
+@patch("bailoclient.client.Client._validate_uploads")
+@patch("bailoclient.client.Client._too_large_for_gateway", return_value=True)
+def test_upload_model_raises_exception_if_model_files_too_large(
+    mock_gateway, mock_validate, mock_generate_uploads, mock_client
+):
+    with pytest.raises(ValueError):
+        model_uuid = "model_abc"
+        binary_file = "../../cypress/fixtures/minimal_binary.zip"
+        code_file = "../../cypress/fixtures/minimal_code.zip"
+        metadata = {"highLevelDetails": {"modelCardVersion": "2"}}
+
+        mock_client.upload_model(
+            metadata=metadata,
+            binary_file=binary_file,
+            code_file=code_file,
+        )
 
 
 def test_download_model_files_raises_error_if_file_type_is_not_code_or_binary(
@@ -313,6 +360,26 @@ def test_download_model_files_overwrites_existing_output_dir_if_user_has_specifi
         f"/deployment/{deployment_uuid}/version/{model_version}/raw/{file_type}",
         output_dir=str(tmpdir),
     )
+
+
+@pytest.mark.parametrize(
+    "file_type, expected_call_count",
+    [("binary", 1), ("code", 1), (None, 2)],
+)
+def test_download_model_files_does_expected_api_calls(
+    file_type, expected_call_count, mock_client
+):
+    mock_client.api.get = Mock(return_value=200)
+
+    mock_client.download_model_files(
+        deployment_uuid="test",
+        model_version="1",
+        file_type=file_type,
+        output_dir="dir",
+        overwrite=True,
+    )
+
+    assert mock_client.api.get.call_count == expected_call_count
 
 
 @patch("bailoclient.client.Client.get_me", return_value=User(_id="user"))

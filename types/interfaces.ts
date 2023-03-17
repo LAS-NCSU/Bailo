@@ -2,9 +2,10 @@ import Logger from 'bunyan'
 import { Date, Types } from 'mongoose'
 import { Dispatch, SetStateAction } from 'react'
 import { UserDoc } from '../server/models/User'
+import { VersionDoc } from '../server/models/Version'
 
 export type { DeploymentDoc as Deployment } from '../server/models/Deployment'
-export type { RequestDoc as Request } from '../server/models/Request'
+export type { ApprovalDoc as Approval } from '../server/models/Approval'
 export type { UserDoc as User } from '../server/models/User'
 export type { VersionDoc as Version } from '../server/models/Version'
 
@@ -28,6 +29,20 @@ export interface StatusError extends Error {
   code: number
 }
 
+export interface DeploymentMetadata {
+  highLevelDetails: {
+    name: string
+
+    [x: string]: unknown
+  }
+
+  contacts: {
+    owner: Array<Entity>
+
+    [x: string]: unknown
+  }
+}
+
 export interface ModelMetadata {
   highLevelDetails: {
     tags: Array<string>
@@ -40,15 +55,18 @@ export interface ModelMetadata {
   }
 
   contacts: {
-    uploader: string
-    reviewer: string
-    manager: string
+    uploader: Array<Entity>
+    reviewer: Array<Entity>
+    manager: Array<Entity>
 
     [x: string]: any
   }
 
   buildOptions?: {
     uploadType: ModelUploadType
+    seldonVersion: string
+
+    [x: string]: any
   }
 
   // allow other properties
@@ -61,7 +79,7 @@ export interface Model {
 
   versions: Array<Types.ObjectId>
 
-  currentMetadata: ModelMetadata
+  latestVersion: VersionDoc | Types.ObjectId
 }
 
 export interface LogStatement {
@@ -123,7 +141,7 @@ export type SeldonVersion = {
   image: string
 }
 
-export type RequestType = 'Upload' | 'Deployment'
+export type ApprovalCategory = 'Upload' | 'Deployment'
 
 export type StepType = 'Form' | 'Data' | 'Message'
 export interface Step {
@@ -255,7 +273,7 @@ export interface LogEntry {
 
 export enum LogType {
   Build = 'build',
-  Request = 'request',
+  Approval = 'approval',
   Misc = 'misc',
 }
 
@@ -269,4 +287,13 @@ export type SchemaQuestion = {
   maxLength?: number
   widget?: string
   readOnly?: boolean
+}
+
+export interface MinimalEntry {
+  compressedSize: number
+  generalPurposeBitFlag: number
+  compressionMethod: number
+  relativeOffsetOfLocalHeader: number
+  uncompressedSize: number
+  fileName: string
 }
