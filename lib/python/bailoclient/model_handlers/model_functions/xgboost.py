@@ -2,8 +2,8 @@ import os
 from typing import List
 from pkg_resources import resource_filename
 
-from bailoclient.utils.enums import ModelFlavour
-from bailoclient.utils.exceptions import ModelMethodNotAvailable
+from bailoclient.enums import ModelFlavour
+from bailoclient.exceptions import ModelMethodNotAvailable
 from bailoclient.model_handlers import bundler, loader, template
 
 
@@ -13,8 +13,8 @@ def xgboost_bundler(model, output_path: str, code_paths: List[str]):
 
     Args:
         model (XGBoost model): The XGBoost model
-        output_path (str): Path to export the model to
-        code_paths (List[str]): List of additional code paths
+        output_path: Path to export the model to
+        code_paths: List of additional code paths
     """
     from mlflow.xgboost import save_model
 

@@ -3,10 +3,10 @@ import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Button from '@mui/material/Button'
 import Grid from '@mui/material/Grid'
-import imageLoader from '@/components/imageLoader'
+import imageLoader from '../src/imageLoader'
 import Image from 'next/image'
 import localFont from '@next/font/local'
-import Link from '@/components/Link'
+import Link from '../src/Link'
 import { createRef } from 'react'
 import Tooltip from '@mui/material/Tooltip'
 import GitHubIcon from '@mui/icons-material/GitHub'
@@ -14,11 +14,14 @@ import IconButton from '@mui/material/IconButton'
 import Container from '@mui/material/Container'
 import Divider from '@mui/material/Divider'
 import StarPurple500Icon from '@mui/icons-material/StarPurple500'
-import Slideshow from '../components/Slideshow'
+import Slideshow from '../src/Slideshow'
+import React from 'react'
 
 import bailoLogo from '../public/bailo-logo.png'
 
-const nunitoSansFont = localFont({ src: '../public/fonts/NunitoSans-Black.ttf' })
+const nunitoSansFont = localFont({
+  src: '../public/fonts/NunitoSans-Black.ttf',
+})
 
 export default function Home() {
   const ref = createRef<HTMLDivElement>()

@@ -10,6 +10,15 @@
     "export": "next build && next export",
     "generate": "node ./scripts/generate.js"
   },
+  "prettier": {
+    "jsxSingleQuote": true,
+    "printWidth": 120,
+    "proseWrap": "always",
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "useTabs": false
+  },
   "dependencies": {
     "@emotion/cache": "11.10.5",
     "@emotion/react": "11.10.5",
@@ -23,7 +32,6 @@
     "@next/mdx": "^13.0.3",
     "dedent-js": "^1.0.1",
     "gray-matter": "^4.0.3",
-    "mdx-mermaid": "^1.3.2",
     "next": "13.0.2",
     "react": "18.2.0",
     "react-dom": "18.2.0",

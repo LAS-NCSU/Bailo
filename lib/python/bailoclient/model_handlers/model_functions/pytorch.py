@@ -2,7 +2,7 @@ import os
 from typing import List
 from pkg_resources import resource_filename
 
-from bailoclient.utils.enums import ModelFlavour
+from bailoclient.enums import ModelFlavour
 from bailoclient.model_handlers import bundler, loader, template
 
 
@@ -12,8 +12,8 @@ def pytorch_bundler(model, output_path: str, code_paths: List[str]):
 
     Args:
         model (Pytorch model): The Pytorch model
-        output_path (str): Path to export the model to
-        code_paths (List[str]): List of additional code paths
+        output_path: Path to export the model to
+        code_paths: List of additional code paths
 
     Returns:
         Tuple(str, List[str]): Path to saved model binary, paths to additional MLflow files to

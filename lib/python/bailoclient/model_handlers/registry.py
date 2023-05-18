@@ -1,4 +1,4 @@
-from bailoclient.utils.enums import ModelFlavour
+from bailoclient.enums import ModelFlavour
 from .model_bundler import Bundler
 from .model_loader import Loader
 
@@ -7,7 +7,7 @@ def bundler(flavour: ModelFlavour):
     """Bundler decorator for registering a model bundler
 
     Args:
-        flavour (ModelFlavour): Model flavour
+        flavour: Model flavour
     """
 
     def register_bundler(func):
