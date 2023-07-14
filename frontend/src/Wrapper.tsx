@@ -6,6 +6,7 @@ import DashboardIcon from '@mui/icons-material/DashboardTwoTone'
 import FileUploadIcon from '@mui/icons-material/FileUploadTwoTone'
 import LinkIcon from '@mui/icons-material/LinkTwoTone'
 import ListAltIcon from '@mui/icons-material/ListAlt'
+import LogoutIcon from '@mui/icons-material/LogoutTwoTone'
 import MenuIcon from '@mui/icons-material/MenuTwoTone'
 import SchemaIcon from '@mui/icons-material/SchemaTwoTone'
 import Settings from '@mui/icons-material/SettingsTwoTone'
@@ -14,13 +15,11 @@ import { ListItemButton } from '@mui/material'
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar'
 import Badge from '@mui/material/Badge'
 import Box from '@mui/material/Box'
-import Container from '@mui/material/Container'
 import CssBaseline from '@mui/material/CssBaseline'
 import Divider from '@mui/material/Divider'
 import MuiDrawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
-import ListItem from '@mui/material/ListItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
@@ -33,6 +32,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import Head from 'next/head'
 import Image from 'next/legacy/image'
+import { useRouter } from 'next/router'
 import React, { MouseEvent, ReactElement, ReactNode, useContext, useEffect, useMemo, useState } from 'react'
 
 import { useGetNumApprovals } from '../data/approvals'
@@ -100,6 +100,8 @@ type WrapperProps = {
 }
 
 export default function Wrapper({ title, page, children }: WrapperProps): ReactElement {
+  const router = useRouter()
+
   const isDocsPage = useMemo(() => page.startsWith('docs'), [page])
 
   const [open, setOpen] = useState(false)
@@ -127,7 +129,7 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
           mt: 4,
         })
         setContentTopStyling({
-          mt: isDocsPage ? 4 : 8,
+          mt: isDocsPage ? 4 : 4,
         })
       }
     }
@@ -175,6 +177,12 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
     },
   })
 
+  const betaAdornment = (
+    <Box component='span' sx={{ marginLeft: 1, color: '#cecece', fontSize: 15 }}>
+      beta
+    </Box>
+  )
+
   return (
     <ThemeProvider theme={theme}>
       <Head>
@@ -215,6 +223,7 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
                 style={{ color: 'inherit', textDecoration: 'inherit', fontSize: '1.25rem', fontWeight: 500 }}
               >
                 Bailo
+                {router.asPath.includes('/beta') && betaAdornment}
               </Link>
             </Box>
             {headerTitle}
@@ -242,6 +251,14 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
                           <Settings fontSize='small' />
                         </ListItemIcon>
                         <ListItemText>Settings</ListItemText>
+                      </MenuItem>
+                    </Link>
+                    <Link href='/api/logout' color='inherit' underline='none'>
+                      <MenuItem data-test='logoutLink'>
+                        <ListItemIcon>
+                          <LogoutIcon fontSize='small' />
+                        </ListItemIcon>
+                        <ListItemText>Sign Out</ListItemText>
                       </MenuItem>
                     </Link>
                   </MenuList>
@@ -395,18 +412,15 @@ export default function Wrapper({ title, page, children }: WrapperProps): ReactE
             backgroundColor: theme.palette.mode === 'light' ? theme.palette.grey[100] : theme.palette.grey[900],
             flexGrow: 1,
             height: '100vh',
-            overflow: 'auto',
           }}
         >
           <Toolbar />
-          <Box sx={contentTopStyling}>
+          <Box sx={{ ...contentTopStyling, height: 'calc(100vh - 98px)', overflow: 'auto' }}>
             {isDocsPage ? (
               children
             ) : (
               <>
-                <Container maxWidth='lg' sx={{ mt: 4, mb: 4 }}>
-                  {children}
-                </Container>
+                <Box sx={{ m: 4 }}>{children}</Box>
                 <Copyright sx={{ mb: 2 }} />
               </>
             )}

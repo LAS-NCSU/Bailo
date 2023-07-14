@@ -1,4 +1,4 @@
-import { ModelDoc } from '../../types/types.js'
+import archiver from 'archiver'
 import bodyParser from 'body-parser'
 import { Request, Response } from 'express'
 import { customAlphabet } from 'nanoid'
@@ -7,12 +7,21 @@ import { createDeploymentApprovals, requestDeploymentsForModelVersions } from '.
 import { createDeployment, findDeploymentByUuid, findDeployments } from '../../services/deployment.js'
 import { findModelByUuid } from '../../services/model.js'
 import { findSchemaByRef } from '../../services/schema.js'
-import { findVersionById, findVersionByName } from '../../services/version.js'
+import { findModelVersions, findVersionById, findVersionByName } from '../../services/version.js'
+import { ModelDoc, ModelUploadType, VersionDoc } from '../../types/types.js'
 import { ApprovalStates, EntityKind } from '../../types/types.js'
 import config from '../../utils/config.js'
+import { isObjectId } from '../../utils/database.js'
 import { isUserInEntityList, parseEntityList } from '../../utils/entity.js'
+import {
+  getBinaryFiles,
+  getCodeFiles,
+  getDockerFiles,
+  getModelMetadata,
+  getModelSchema,
+} from '../../utils/exportModel.js'
 import { getClient } from '../../utils/minio.js'
-import { BadReq, Forbidden, NotFound, Unauthorised } from '../../utils/result.js'
+import { BadReq, Forbidden, InternalServer, NotFound } from '../../utils/result.js'
 import { ensureUserRole } from '../../utils/user.js'
 import { validateSchema } from '../../utils/validateSchema.js'
 
@@ -86,6 +95,27 @@ export const postDeployment = [
       )
     }
 
+    const version = await findVersionById(req.user, (model as ModelDoc).latestVersion)
+
+    if (!version) {
+      throw NotFound(
+        { code: 'version_not_found', versionId: (model as ModelDoc).latestVersion },
+        'Unable to find version'
+      )
+    }
+
+    const versions = await findModelVersions(req.user, model._id)
+
+    const approvedVersions = versions.filter(
+      (modelVersion) =>
+        (modelVersion as VersionDoc).managerApproved === ApprovalStates.Accepted &&
+        (modelVersion as VersionDoc).reviewerApproved === ApprovalStates.Accepted
+    )
+
+    if (approvedVersions.length === 0) {
+      throw BadReq({}, 'At least one version of this model must be fully approved before requesting a deployment')
+    }
+
     const name = body.highLevelDetails.name
       .toLowerCase()
       .replace(/[^a-z 0-9]/g, '')
@@ -113,14 +143,6 @@ export const postDeployment = [
     req.log.info({ code: 'named_deployment', deploymentId: deployment._id }, `Named deployment '${uuid}'`)
 
     await deployment.populate('model')
-    const version = await findVersionById(req.user, (deployment.model as ModelDoc).latestVersion)
-
-    if (!version) {
-      throw NotFound(
-        { code: 'version_not_found', versionId: (deployment.model as ModelDoc).latestVersion },
-        'Unable to find version'
-      )
-    }
 
     const managerApproval = await createDeploymentApprovals({
       deployment,
@@ -248,7 +270,7 @@ export const fetchRawModelFiles = [
 
     if (!(await isUserInEntityList(req.user, deployment.metadata.contacts.owner))) {
       const owners = deployment.metadata.contacts.owner.map((owner: any) => owner.id).join(', ')
-      throw Unauthorised(
+      throw Forbidden(
         { deploymentOwner: deployment.metadata.contacts.owner },
         `User is not authorised to download this file. Requester: ${req.user.id}, owners: ${owners}`
       )
@@ -261,7 +283,7 @@ export const fetchRawModelFiles = [
     }
 
     if (deployment.managerApproved !== 'Accepted') {
-      throw Unauthorised(
+      throw Forbidden(
         { approvalStatus: deployment.managerApproved },
         'User is not authorised to download this file as it has not been approved.'
       )
@@ -321,5 +343,75 @@ export const getDeploymentAccess = [
     return res.json({
       owner,
     })
+  },
+]
+
+export const getExportModelVersion = [
+  ensureUserRole('user'),
+  bodyParser.json(),
+  async (req: Request, res: Response) => {
+    // Get model params
+    const { uuid: deploymentUuid, version: versionName } = req.params
+
+    const deployment = await findDeploymentByUuid(req.user, deploymentUuid)
+    if (!deployment) {
+      throw NotFound(
+        { code: 'deployment_not_found', deploymentUuid },
+        `Unable to find requested deployment: '${deploymentUuid}'`
+      )
+    }
+
+    if (!(await isUserInEntityList(req.user, deployment.metadata.contacts.owner))) {
+      throw Forbidden({ code: 'user_unauthorised' }, 'User is not authorised to do this operation.')
+    }
+
+    if (isObjectId(deployment.model)) {
+      return InternalServer({ deploymentUuid }, 'A deployment was found without a corresponding model.')
+    }
+
+    const version = await findVersionByName(req.user, deployment.model, versionName)
+
+    if (!version) {
+      throw NotFound({ deployment, versionName }, `Version ${versionName} not found for deployment ${deployment.uuid}.`)
+    }
+
+    // Set .zip extension to request header
+    res.set('Content-disposition', `attachment; filename=${deployment.model.uuid}.zip`)
+    res.set('Content-Type', 'application/zip')
+
+    const archive = archiver('zip')
+
+    archive.on('error', (err) => {
+      throw InternalServer(
+        {
+          err,
+          deploymentUuid,
+          versionName,
+        },
+        'Errored during artefact bundling'
+      )
+    })
+
+    archive.pipe(res)
+
+    const modelVersion = await getModelMetadata(version, archive)
+    await getModelSchema(modelVersion.metadata.schemaRef, archive)
+
+    const uploadType = modelVersion.metadata.buildOptions?.uploadType
+
+    if (uploadType === ModelUploadType.Zip) {
+      await getCodeFiles(version, archive)
+      await getBinaryFiles(version, archive)
+    }
+
+    if (uploadType === ModelUploadType.Docker || (uploadType === ModelUploadType.Zip && modelVersion.built)) {
+      const tidyUp = await getDockerFiles(deployment.model.uuid, version, archive)
+
+      archive.on('end', async () => {
+        await tidyUp()
+      })
+    }
+
+    await archive.finalize()
   },
 ]

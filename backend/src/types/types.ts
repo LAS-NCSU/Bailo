@@ -25,6 +25,8 @@ export enum ApprovalCategory {
 export interface DeploymentMetadata {
   highLevelDetails: {
     name: string
+    modelID: string
+
     [x: string]: unknown
   }
 
@@ -97,11 +99,6 @@ export interface Entity {
 export interface ParsedEntity {
   kind: EntityKind
   entity: UserDoc
-}
-
-export interface StatusError extends Error {
-  data: any
-  code: number
 }
 
 export interface UiConfig {
