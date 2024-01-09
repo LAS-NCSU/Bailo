@@ -1,0 +1,21 @@
+FROM continuumio/miniconda3:22.11.1 AS final
+SHELL ["/bin/bash", "-c"]
+
+ARG TRITON_ENV_NAME="triton-custom-envs" \
+    TRITON_ENV_TARBALL="./envs/triton-custom-env.tar.gz" \ 
+    CONDA_ENV_YAML="./envs/environment.yml"
+
+RUN conda config --add channels conda-forge && \
+    conda install conda-pack
+
+COPY base_environment.yml .
+
+COPY requirements.txt .
+
+RUN mkdir $(dirname $TRITON_ENV_TARBALL);
+RUN conda env create  --name $TRITON_ENV_NAME --file base_environment.yml
+RUN conda run -n $TRITON_ENV_NAME pip install -r requirements.txt
+RUN conda env export -n $TRITON_ENV_NAME > $CONDA_ENV_YAML
+
+RUN conda-pack --ignore-missing-files  -n $TRITON_ENV_NAME -o $TRITON_ENV_TARBALL;
+RUN chmod -R 776 $(dirname $TRITON_ENV_TARBALL)

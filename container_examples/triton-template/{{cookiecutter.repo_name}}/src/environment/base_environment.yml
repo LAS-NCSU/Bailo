@@ -1,0 +1,6 @@
+name: triton-custom-envs
+channels:
+  - conda-forge
+dependencies:
+  - pip=23.2.1=pyhd8ed1ab_0
+  - python=3.10.13=h955ad1f_0

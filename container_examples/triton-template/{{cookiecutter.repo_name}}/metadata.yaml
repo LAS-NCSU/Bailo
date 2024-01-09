@@ -1,0 +1,3 @@
+author: {{cookiecutter.author_name}}
+project_name: {{cookiecutter.repo_name}}
+project_version: {{cookiecutter.project_version}}

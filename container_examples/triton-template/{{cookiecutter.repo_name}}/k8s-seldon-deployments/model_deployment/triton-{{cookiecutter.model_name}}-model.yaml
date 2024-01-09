@@ -1,0 +1,10 @@
+apiVersion: mlops.seldon.io/v1alpha1
+kind: Model
+metadata:
+  name: {{cookiecutter.model_name}}
+spec:
+  replicas: 1
+  storageUri: "s3://mds-models/triton/clip"
+  requirements:
+  - triton
+  - python

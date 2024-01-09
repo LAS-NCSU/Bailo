@@ -1,0 +1,38 @@
+version: '3.9'
+services:
+  triton-serving:
+    env_file:
+      - .env
+    restart: unless-stopped
+    container_name: triton-cpu
+    # user: triton-server
+    command:
+      - /opt/nvidia/nvidia_entrypoint.sh
+      - tritonserver
+      - --model-repository=$TRITON_MODELS_DIR
+      - --http-port=$TRITON_HTTP_PORT
+      - --grpc-port=$TRITON_GRPC_PORT
+      - --metrics-port=$TRITON_METRICS_PORT # Must be different to engine port
+      - --cache-config=local,size=1048576
+      - --model-control-mode=explicit # Explicitly load models
+      - --backend-config=python,shm-default-byte-size=16777216
+      - --log-verbose=1 # Enable Verbose logging
+    image: nvcr.io/nvidia/tritonserver:23.09-pyt-python-py3
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    ports:
+      - 8080:9000
+      - 9500:9500
+      - 8002:8002
+    volumes:
+      - ./dist/models:/mnt/agent/models:ro
+      - ./dist/envs:/mnt/envs:ro
+      - triton:$TRANSFORMERS_CACHE:rw
+    environment:
+      - TRANSFORMERS_CACHE=$TRANSFORMERS_CACHE
+      - DTRITON_ENABLE_TRACING=ON
+      - LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libtcmalloc.so.4
+volumes:
+  triton:
+    name: "triton-cache"

@@ -1,0 +1,76 @@
+name: "{{cookiecutter.model_name}}"
+platform: ""
+backend: "python"
+version_policy: {
+    latest: {
+        num_versions: 1
+    }
+}
+
+max_batch_size: 0
+
+input: [
+    {
+        name: "INPUT__0",
+        data_type: TYPE_STRING,
+        format: FORMAT_NONE,
+        dims: [
+            -1,
+        ],
+        is_shape_tensor: false,
+        allow_ragged_batch: false,
+        optional: false
+    }
+]
+
+output: [
+    {
+        name: "OUTPUT__0",
+        data_type: TYPE_STRING,
+        dims: [
+            -1
+        ],
+        is_shape_tensor: false
+    }
+]
+
+batch_input: []
+
+batch_output: []
+
+instance_group [
+  {
+    kind: KIND_AUTO
+  }
+]
+
+parameters: {
+  key: "EXECUTION_ENV_PATH",
+  value: {string_value: "$$TRITON_MODEL_DIRECTORY/triton-custom-env.tar.gz"}
+}
+
+parameters: {
+  key: "MODEL_NAME",
+  value: {string_value: "some-full-model-name"}
+}
+
+response_cache {
+  enable: true
+}
+
+optimization: {
+    priority: PRIORITY_DEFAULT,
+    input_pinned_memory: {
+        enable: true
+    },
+    output_pinned_memory: {
+        enable: true
+    },
+    gather_kernel_buffer_threshold: 0,
+    eager_batching: false
+}
+
+default_model_filename: "model.py"
+cc_model_filenames: {}
+metric_tags: {}
+model_warmup: []

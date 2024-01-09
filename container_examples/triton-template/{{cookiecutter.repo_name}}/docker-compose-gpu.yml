@@ -1,0 +1,19 @@
+version: '3.9'
+services:
+  triton-serving:
+    extends:
+      file: docker-compose.yml
+      service: triton-serving
+    env_file:
+      - .env
+    container_name: triton-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  triton:
